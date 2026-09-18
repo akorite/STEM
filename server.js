@@ -1,18 +1,19 @@
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 
-function getIndexHtml() {
-  const code = fs.readFileSync('BroccoliBiosphereCabin.ino', 'utf8');
-  const startMarker = 'const char INDEX_HTML[] PROGMEM = R"rawliteral(';
-  const endMarker = ')rawliteral";';
-  const startIdx = code.indexOf(startMarker);
-  const endIdx = code.indexOf(endMarker);
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
-  if (startIdx === -1 || endIdx === -1) {
-    throw new Error('Failed to locate INDEX_HTML markers in BroccoliBiosphereCabin.ino');
-  }
-  return code.substring(startIdx + startMarker.length, endIdx);
-}
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8'
+};
 
 let state = {
   ip: "127.0.0.1:8080",
@@ -72,26 +73,48 @@ let state = {
   },
   logs: [
     { t: "00:10:15", m: "Hardware GPIO Matriks Interaktif Aktif (Port 8080)" },
-    { t: "00:09:00", m: "Brocco Maskot Berjalan Aktif di Pet Studio 🌸" },
-    { t: "00:07:30", m: "Kondisi Prima: Suhu 20.4°C, RH 57.6%, VPD 0.62 kPa ✨" },
-    { t: "00:05:42", m: "Siklus Otomatis Aktif - Skor Kenyamanan 97.4%" },
+    { t: "00:09:00", m: "Telemetri Stabil: Suhu 20.4°C, RH 57.6%, VPD 0.62 kPa" },
+    { t: "00:07:30", m: "Autonomous Closed-Loop Climate Engine Initialized" },
+    { t: "00:05:42", m: "Siklus Otomatis Aktif - Plant Comfort Score 97.4%" },
     { t: "00:00:00", m: "Inisialisasi Pengontrol Kabin Biosfer Brokoli..." }
   ]
 };
 
-const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-
-  if (url.pathname === '/' || url.pathname === '/index.html') {
-    try {
-      const html = getIndexHtml();
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(html);
-    } catch (err) {
-      res.writeHead(500, { 'Content-Type': 'text/plain' });
-      res.end('Error loading dashboard: ' + err.message);
+function serveStatic(req, res, filePath) {
+  fs.readFile(filePath, (err, content) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('404 Not Found');
+      } else {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('500 Internal Server Error: ' + err.message);
+      }
+      return;
     }
-  } else if (url.pathname === '/api/telemetry') {
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(content);
+  });
+}
+
+const server = http.createServer((req, res) => {
+  // Global CORS Headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin, Authorization, Accept');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+  const pathname = url.pathname;
+
+  if (pathname === '/api/telemetry') {
     state.uptimeSec += 1;
     const h = String(Math.floor(state.uptimeSec / 3600)).padStart(2, '0');
     const m = String(Math.floor((state.uptimeSec % 3600) / 60)).padStart(2, '0');
@@ -148,7 +171,7 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(payload));
-  } else if (url.pathname === '/api/control') {
+  } else if (pathname === '/api/control') {
     const action = url.searchParams.get('action');
     const nowTs = new Date().toTimeString().split(' ')[0];
 
@@ -156,7 +179,7 @@ const server = http.createServer((req, res) => {
       state.relays.spray1 = true;
       state.valves.v1 = 90;
       state.tank1Vol = Math.max(0, +(state.tank1Vol - 4.0).toFixed(1));
-      state.logs.unshift({ t: nowTs, m: "Aksi Pengasuhan: Beri Minum (Semprot Air Baku Tangki 1 GPIO 16 5s)" });
+      state.logs.unshift({ t: nowTs, m: "Emergency Flush: Semprot Air Baku Tangki 1 GPIO 16 (5s)" });
       setTimeout(() => {
         state.relays.spray1 = false;
         state.valves.v1 = 0;
@@ -164,7 +187,7 @@ const server = http.createServer((req, res) => {
     } else if (action === 'toggleRelay') {
       const ch = url.searchParams.get('ch');
       if (state.autoMode) {
-        state.autoMode = false; // Auto switch to manual override on direct hardware click
+        state.autoMode = false;
         state.logs.unshift({ t: nowTs, m: "Mode Otomatis dialihkan ke MANUAL OVERRIDE oleh klik relay" });
       }
 
@@ -228,6 +251,9 @@ const server = http.createServer((req, res) => {
     } else if (action === 'day') {
       state.day = parseInt(url.searchParams.get('val'), 10) || 1;
       state.logs.unshift({ t: nowTs, m: `Penyetel Hari: Hari ke-${state.day}` });
+    } else if (action === 'tank') {
+      state.activeTank = parseInt(url.searchParams.get('val'), 10) || 1;
+      state.logs.unshift({ t: nowTs, m: `Tangki Aktif: Tangki ${state.activeTank}` });
     } else if (action === 'refill') {
       const tank = url.searchParams.get('tank');
       if (tank === '1') {
@@ -245,11 +271,25 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true }));
   } else {
-    res.writeHead(404);
-    res.end('Not Found');
+    // Static File Serving
+    let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
+    if (safePath === '/' || safePath === '\\') safePath = '/index.html';
+
+    let targetFile = path.join(PUBLIC_DIR, safePath);
+
+    // Fallback check: if requested file doesn't exist in public, check root
+    if (!fs.existsSync(targetFile)) {
+      const rootFallback = path.join(__dirname, safePath);
+      if (fs.existsSync(rootFallback) && !fs.statSync(rootFallback).isDirectory()) {
+        targetFile = rootFallback;
+      }
+    }
+
+    serveStatic(req, res, targetFile);
   }
 });
 
-server.listen(8080, '127.0.0.1', () => {
-  console.log('Kebun Biosfer Web Server running at http://127.0.0.1:8080/');
+const PORT = 8080;
+server.listen(PORT, '127.0.0.1', () => {
+  console.log(`Kebun Biosfer Admin Server running at http://127.0.0.1:${PORT}/`);
 });

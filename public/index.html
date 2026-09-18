@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kebun Biosfer - Modern Pastel Biosphere Console</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="console-root">
+    <!-- Top System Navigation Bar -->
+    <header class="system-bar">
+      <div class="system-identity">
+        <div class="brand-badge">
+          <span class="brand-sprout-icon" aria-hidden="true">🌱</span>
+          <div class="system-titles">
+            <span class="system-name">Kebun Biosfer</span>
+            <span class="system-sub">Microgreen Biosphere Console</span>
+          </div>
+        </div>
+        <div class="status-chip">
+          <div class="status-lamp" id="liveDot" title="System Link Status"></div>
+          <span class="status-tag status-nominal" id="systemStatusBadge">NOMINAL ✨</span>
+        </div>
+      </div>
+
+      <div class="system-controls">
+        <!-- Control Mode Toggle -->
+        <div class="control-switch-group" title="Toggle autonomous closed-loop regulation">
+          <span class="switch-legend">Regulation</span>
+          <button class="mode-toggle-btn active" id="btnAutoMode" type="button" aria-label="Toggle Auto Regulation">
+            <span class="toggle-indicator"></span>
+            <span id="lblAutoMode">CLOSED-LOOP AUTO</span>
+          </button>
+        </div>
+
+        <!-- Growth Phase Toggle -->
+        <div class="control-switch-group" title="Switch cultivation phase parameters">
+          <span class="switch-legend">Cultivation</span>
+          <button class="phase-toggle-btn" id="btnPhase" type="button" aria-label="Toggle Growth Phase">
+            <span id="lblPhase">PHASE 2: AUTOTROPHIC</span>
+          </button>
+        </div>
+
+        <!-- Day Counter Stepper -->
+        <div class="day-controller" title="Current cultivation cycle day">
+          <button class="day-nav-btn" id="btnDayDec" type="button" aria-label="Previous day">◀</button>
+          <span class="day-readout" id="dayDisplay">DAY 05 / 10</span>
+          <button class="day-nav-btn" id="btnDayInc" type="button" aria-label="Next day">▶</button>
+        </div>
+
+        <!-- Remote Host Link -->
+        <div class="host-link-station">
+          <input type="text" id="targetHostInput" class="host-input" placeholder="http://127.0.0.1:8080" spellcheck="false" title="Target REST API address" aria-label="Target REST API Host">
+          <button class="host-connect-btn" id="btnConnectTarget" type="button">LINK ⚡</button>
+        </div>
+
+        <!-- System Clocks & Diagnostics -->
+        <div class="system-clocks">
+          <span class="clock-uptime" id="uptimeDisplay" title="System Uptime">00:00:00</span>
+          <span class="clock-address" id="ipDisplay" title="Target IP">127.0.0.1:8080</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Viewport Layout (Ergonomic Dashboard) -->
+    <main class="console-workspace">
+      <!-- Upper Section: Sensory Stations & Plant Companion -->
+      <section class="sensory-station-deck">
+        <!-- Station 1: Atmospheric Thermodynamics (Temp + RH + VPD) -->
+        <section class="station-block station-atmosphere">
+          <div class="station-header">
+            <div class="station-title-wrap">
+              <span class="station-icon" aria-hidden="true">🌤️</span>
+              <h2 class="station-title">Atmospheric Balance</h2>
+            </div>
+            <span class="station-tag tag-mint">Psychrometric Unit</span>
+          </div>
+
+          <div class="atmosphere-grid">
+            <!-- Air Temp Primary Reading -->
+            <div class="reading-cell" id="cardTemp">
+              <div class="cell-head">
+                <span class="cell-label">Air Temperature</span>
+                <span class="cell-sub-icon">🌡️</span>
+              </div>
+              <div class="cell-metric">
+                <span class="cell-num" id="valTemp">20.4</span>
+                <span class="cell-unit">°C</span>
+              </div>
+              <div class="cell-bar-wrap" title="Optimal range: 18.0 - 22.0°C">
+                <div class="cell-bar-track">
+                  <div class="bar-opt-zone" style="left: 23%; width: 31%;"></div>
+                  <div class="bar-needle" id="needleTemp" style="left: 50%;"></div>
+                </div>
+              </div>
+              <div class="cell-meta">
+                <span class="meta-note" id="subTemp">Setpoint: 20.0°C</span>
+                <span class="state-pill state-good" id="tagTemp">NOMINAL</span>
+              </div>
+            </div>
+
+            <!-- Relative Humidity Primary Reading -->
+            <div class="reading-cell" id="cardRh">
+              <div class="cell-head">
+                <span class="cell-label">Relative Humidity</span>
+                <span class="cell-sub-icon">💧</span>
+              </div>
+              <div class="cell-metric">
+                <span class="cell-num" id="valRh">57.6</span>
+                <span class="cell-unit">%RH</span>
+              </div>
+              <div class="cell-bar-wrap" title="Optimal range: 50 - 65% RH">
+                <div class="cell-bar-track">
+                  <div class="bar-opt-zone" style="left: 33%; width: 25%;"></div>
+                  <div class="bar-needle needle-cyan" id="needleRh" style="left: 50%;"></div>
+                </div>
+              </div>
+              <div class="cell-meta">
+                <span class="meta-note" id="subRh">Target: 57.5%</span>
+                <span class="state-pill state-good" id="tagRh">STABLE</span>
+              </div>
+            </div>
+
+            <!-- Vapor Pressure Deficit (VPD) -->
+            <div class="reading-cell vpd-cell" id="cardVpd">
+              <div class="cell-head">
+                <span class="cell-label">Vapor Pressure Deficit</span>
+                <span class="cell-sub-icon">🍃</span>
+              </div>
+              <div class="cell-metric">
+                <span class="cell-num num-vpd" id="valVpd">0.62</span>
+                <span class="cell-unit">kPa</span>
+              </div>
+              <div class="cell-bar-wrap" title="Ideal transpiration zone: 0.4 - 0.8 kPa">
+                <div class="cell-bar-track">
+                  <div class="bar-opt-zone" style="left: 21%; width: 29%;"></div>
+                  <div class="bar-needle needle-amber" id="needleVpd" style="left: 45%;"></div>
+                </div>
+              </div>
+              <div class="cell-meta">
+                <span class="meta-note" id="subVpd">VPsat 2.34 / VPact 1.40</span>
+                <span class="state-pill state-good" id="tagVpd">IDEAL TRANSPIRATION</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Station 2: Substrate, Canopy & Cute Brocco Mascot Companion -->
+        <section class="station-block station-biomass">
+          <div class="station-header">
+            <div class="station-title-wrap">
+              <span class="station-icon" aria-hidden="true">🌱</span>
+              <h2 class="station-title">Plant &amp; Soil Sanctuary</h2>
+            </div>
+            <span class="station-tag tag-peach">Living Habitat</span>
+          </div>
+
+          <div class="biomass-grid">
+            <!-- Soil Capacitive Moisture -->
+            <div class="reading-cell" id="cardSoil">
+              <div class="cell-head">
+                <span class="cell-label">Soil Volumetric Moisture</span>
+                <span class="cell-sub-icon">🪴</span>
+              </div>
+              <div class="cell-metric">
+                <span class="cell-num" id="valSoil">56.4</span>
+                <span class="cell-unit">%</span>
+              </div>
+              <div class="cell-bar-wrap" title="Hydration target: 45 - 70%">
+                <div class="cell-bar-track">
+                  <div class="bar-opt-zone" style="left: 35%; width: 36%;"></div>
+                  <div class="bar-needle needle-green" id="needleSoil" style="left: 55%;"></div>
+                </div>
+              </div>
+              <div class="cell-meta">
+                <span class="meta-note" id="subSoil">Capacitive: 2240 ADC (1.81V)</span>
+                <span class="state-pill state-good" id="tagSoil">HYDRATED</span>
+              </div>
+            </div>
+
+            <!-- Plant Comfort Index with Interactive Cute Sprout Companion -->
+            <div class="reading-cell companion-cell" id="cardPcs">
+              <div class="cell-head">
+                <span class="cell-label">Plant Comfort Index</span>
+                <span class="cell-sub-icon">💖</span>
+              </div>
+              <div class="companion-layout">
+                <!-- Cute Mascot Avatar -->
+                <div class="sprout-avatar-card" id="sproutMascot" title="Click me for a happy bounce!">
+                  <svg class="brocco-svg" viewBox="0 0 100 100" width="56" height="56" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="broccoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#34d399"/>
+                        <stop offset="100%" stop-color="#059669"/>
+                      </linearGradient>
+                      <linearGradient id="cheekGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#f472b6"/>
+                        <stop offset="100%" stop-color="#fb7185"/>
+                      </linearGradient>
+                    </defs>
+                    <!-- Small Ground Shadow -->
+                    <ellipse cx="50" cy="88" rx="28" ry="6" fill="rgba(16, 185, 129, 0.15)" />
+                    <!-- Cute Plant Pot -->
+                    <path d="M30 64 L70 64 L65 86 L35 86 Z" fill="#fbcfe8" stroke="#f472b6" stroke-width="2.5" stroke-linejoin="round"/>
+                    <rect x="28" y="60" width="44" height="6" rx="3" fill="#f472b6"/>
+                    <!-- Sprout Stem -->
+                    <path d="M50 60 C50 48, 50 42, 50 34" stroke="#059669" stroke-width="5" stroke-linecap="round"/>
+                    <!-- Leaf Left -->
+                    <path d="M49 46 C34 44, 28 32, 34 26 C42 22, 48 36, 49 46 Z" fill="url(#broccoGrad)"/>
+                    <!-- Leaf Right -->
+                    <path d="M51 40 C66 38, 72 26, 66 20 C58 16, 52 30, 51 40 Z" fill="url(#broccoGrad)"/>
+                    <!-- Center Microgreen Crown -->
+                    <circle cx="50" cy="22" r="14" fill="url(#broccoGrad)" id="broccoCrown"/>
+                    <!-- Cute Face on Crown -->
+                    <!-- Left Eye -->
+                    <ellipse cx="45" cy="22" rx="2" ry="2.8" fill="#0f172a" id="mascotEyeL"/>
+                    <circle cx="44.2" cy="20.8" r="0.9" fill="#ffffff"/>
+                    <!-- Right Eye -->
+                    <ellipse cx="55" cy="22" rx="2" ry="2.8" fill="#0f172a" id="mascotEyeR"/>
+                    <circle cx="54.2" cy="20.8" r="0.9" fill="#ffffff"/>
+                    <!-- Blushing Cheeks -->
+                    <circle cx="41" cy="25.5" r="2.8" fill="url(#cheekGrad)" opacity="0.8" id="mascotCheekL"/>
+                    <circle cx="59" cy="25.5" r="2.8" fill="url(#cheekGrad)" opacity="0.8" id="mascotCheekR"/>
+                    <!-- Happy Smile -->
+                    <path d="M47.5 25 Q50 28 52.5 25" fill="none" stroke="#0f172a" stroke-width="1.6" stroke-linecap="round" id="mascotMouth"/>
+                    <!-- Tiny Sparkle -->
+                    <path d="M68 12 L70 8 L72 12 L76 14 L72 16 L70 20 L68 16 L64 14 Z" fill="#facc15" opacity="0.9"/>
+                  </svg>
+                  <span class="mascot-mood-tag" id="mascotMoodTag">Happy ✨</span>
+                </div>
+
+                <!-- Metric Details -->
+                <div class="companion-metric-box">
+                  <div class="cell-metric">
+                    <span class="cell-num" id="valPcs">97.4</span>
+                    <span class="cell-unit">%</span>
+                  </div>
+                  <div class="cell-bar-wrap" title="Plant Comfort Score index">
+                    <div class="progress-linear-track">
+                      <div class="progress-linear-fill" id="fillPcs"></div>
+                    </div>
+                  </div>
+                  <div class="cell-meta">
+                    <span class="meta-note" id="subPcs">T40% • RH30% • VPD30%</span>
+                    <span class="state-pill state-good" id="tagPcs">OPTIMAL</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Station 3: Fluidics & Reservoir Station (Pastel Test-Tube Vials) -->
+        <section class="station-block station-fluidics" id="cardTanks">
+          <div class="station-header">
+            <div class="station-title-wrap">
+              <span class="station-icon" aria-hidden="true">🧪</span>
+              <h2 class="station-title">Fluidics &amp; Reservoirs</h2>
+            </div>
+            <span class="station-tag tag-sky" id="activeTankLabel">TANK 1 ACTIVE</span>
+          </div>
+
+          <div class="fluidics-deck">
+            <!-- Tank 1: Demineralized Water Tube -->
+            <div class="fluid-column">
+              <div class="fluid-info">
+                <span class="fluid-name">💧 T1 Water</span>
+                <span class="fluid-volume" id="valTank1">885 mL</span>
+              </div>
+              <div class="cylinder-meter" title="Tank 1 Demineralized Water Level">
+                <div class="cylinder-graduations"></div>
+                <div class="cylinder-fill fill-water" id="fillTank1">
+                  <div class="liquid-bubble b1"></div>
+                  <div class="liquid-bubble b2"></div>
+                </div>
+              </div>
+              <button class="fluid-action-btn res-btn" data-tank="1" type="button" aria-label="Refill Tank 1">REFILL 🧴</button>
+            </div>
+
+            <!-- Tank 2: Chelated Micronutrients Tube -->
+            <div class="fluid-column">
+              <div class="fluid-info">
+                <span class="fluid-name">🌿 T2 Nutrients</span>
+                <span class="fluid-volume" id="valTank2">920 mL</span>
+              </div>
+              <div class="cylinder-meter" title="Tank 2 Chelated Micronutrient Level">
+                <div class="cylinder-graduations"></div>
+                <div class="cylinder-fill fill-nutrient" id="fillTank2">
+                  <div class="liquid-bubble b1"></div>
+                  <div class="liquid-bubble b2"></div>
+                </div>
+              </div>
+              <button class="fluid-action-btn res-btn" data-tank="2" type="button" aria-label="Refill Tank 2">REFILL 🧴</button>
+            </div>
+          </div>
+
+          <div class="fluidics-footer">
+            <span class="fluidics-rate">Nominal Spray: 0.8 mL/sec</span>
+            <button class="line-switch-action" id="btnToggleTank" type="button">SWITCH LINE ⇄</button>
+          </div>
+        </section>
+      </section>
+
+      <!-- Middle Section: Precision Strip-Chart Recorder & Parameter Setpoints -->
+      <section class="recorder-deck">
+        <!-- Calibrated Strip-Chart Telemetry Recorder -->
+        <section class="instrument-panel chart-recorder-panel">
+          <div class="panel-top">
+            <div class="panel-heading">
+              <div class="panel-title-wrap">
+                <span class="panel-icon" aria-hidden="true">📈</span>
+                <h3 class="panel-title-text">Environmental Strip-Chart</h3>
+              </div>
+              <span class="panel-sub-text">Rolling 20-Sample Historical Buffer</span>
+            </div>
+            <div class="recorder-legend">
+              <span class="legend-channel"><span class="legend-swatch swatch-temp"></span> Temp (°C)</span>
+              <span class="legend-channel"><span class="legend-swatch swatch-rh"></span> Humidity (%RH)</span>
+              <span class="legend-channel"><span class="legend-hatch"></span> Target Band (18-22°C)</span>
+              <span class="recorder-stats-ticker" id="chartStats">T: 20.1-20.5°C | RH: 57.6-59.0%</span>
+            </div>
+          </div>
+
+          <div class="chart-viewport" id="chartWrap">
+            <svg id="telemetrySvg" class="telemetry-strip-svg" viewBox="0 0 840 220" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="curveFillTemp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#10b981" stop-opacity="0.28"/>
+                  <stop offset="100%" stop-color="#10b981" stop-opacity="0.02"/>
+                </linearGradient>
+                <linearGradient id="curveFillRh" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#0284c7" stop-opacity="0.22"/>
+                  <stop offset="100%" stop-color="#0284c7" stop-opacity="0.02"/>
+                </linearGradient>
+                <pattern id="targetZonePattern" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(16, 185, 129, 0.22)" stroke-width="2"/>
+                </pattern>
+              </defs>
+
+              <g id="chartTargetBands"></g>
+              <g id="chartGridLines"></g>
+              <path id="tempAreaPath" fill="url(#curveFillTemp)" d=""></path>
+              <path id="rhAreaPath" fill="url(#curveFillRh)" d=""></path>
+              <path id="tempLinePath" class="plot-temp" d=""></path>
+              <path id="rhLinePath" class="plot-rh" d=""></path>
+              <g id="tempPoints"></g>
+              <g id="rhPoints"></g>
+              <g id="chartAxesLabels"></g>
+            </svg>
+          </div>
+        </section>
+
+        <!-- Closed-Loop Agronomic Thresholds & Calibration Station -->
+        <section class="instrument-panel setpoints-station-panel">
+          <div class="panel-top">
+            <div class="panel-heading">
+              <div class="panel-title-wrap">
+                <span class="panel-icon" aria-hidden="true">⚙️</span>
+                <h3 class="panel-title-text">Regulation Targets</h3>
+              </div>
+              <span class="panel-sub-text">Closed-Loop Parameters</span>
+            </div>
+            <button class="commit-setpoints-btn" id="btnSyncThresholds" type="button">SAVE TARGETS ✨</button>
+          </div>
+
+          <div class="setpoints-body">
+            <!-- Temperature Limits -->
+            <div class="setpoint-card">
+              <div class="setpoint-title-bar">
+                <span class="setpoint-label">🌡️ Temperature Boundaries</span>
+                <span class="setpoint-preview" id="previewTemp">18.0°C - 22.0°C</span>
+              </div>
+              <div class="setpoint-inputs">
+                <div class="setpoint-input-group">
+                  <span class="input-bound">MIN</span>
+                  <div class="stepper-box">
+                    <button class="step-btn step-dec" data-target="inputTempMin" data-step="0.5" type="button" aria-label="Decrease min temp">−</button>
+                    <input type="number" step="0.5" id="inputTempMin" value="18.0" aria-label="Minimum Temperature">
+                    <button class="step-btn step-inc" data-target="inputTempMin" data-step="0.5" type="button" aria-label="Increase min temp">+</button>
+                  </div>
+                  <span class="input-unit">°C</span>
+                </div>
+                <div class="setpoint-input-group">
+                  <span class="input-bound">MAX</span>
+                  <div class="stepper-box">
+                    <button class="step-btn step-dec" data-target="inputTempMax" data-step="0.5" type="button" aria-label="Decrease max temp">−</button>
+                    <input type="number" step="0.5" id="inputTempMax" value="22.0" aria-label="Maximum Temperature">
+                    <button class="step-btn step-inc" data-target="inputTempMax" data-step="0.5" type="button" aria-label="Increase max temp">+</button>
+                  </div>
+                  <span class="input-unit">°C</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Humidity Limits -->
+            <div class="setpoint-card">
+              <div class="setpoint-title-bar">
+                <span class="setpoint-label">💧 Relative Humidity Limits</span>
+                <span class="setpoint-preview" id="previewRh">50.0% - 65.0%</span>
+              </div>
+              <div class="setpoint-inputs">
+                <div class="setpoint-input-group">
+                  <span class="input-bound">MIN</span>
+                  <div class="stepper-box">
+                    <button class="step-btn step-dec" data-target="inputRhMin" data-step="1" type="button" aria-label="Decrease min humidity">−</button>
+                    <input type="number" step="1" id="inputRhMin" value="50.0" aria-label="Minimum Humidity">
+                    <button class="step-btn step-inc" data-target="inputRhMin" data-step="1" type="button" aria-label="Increase min humidity">+</button>
+                  </div>
+                  <span class="input-unit">%</span>
+                </div>
+                <div class="setpoint-input-group">
+                  <span class="input-bound">MAX</span>
+                  <div class="stepper-box">
+                    <button class="step-btn step-dec" data-target="inputRhMax" data-step="1" type="button" aria-label="Decrease max humidity">−</button>
+                    <input type="number" step="1" id="inputRhMax" value="65.0" aria-label="Maximum Humidity">
+                    <button class="step-btn step-inc" data-target="inputRhMax" data-step="1" type="button" aria-label="Increase max humidity">+</button>
+                  </div>
+                  <span class="input-unit">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Soil Moisture Limits -->
+            <div class="setpoint-card">
+              <div class="setpoint-title-bar">
+                <span class="setpoint-label">🪴 Soil Target Boundaries</span>
+                <span class="setpoint-preview" id="previewSoil">45.0% - 70.0%</span>
+              </div>
+              <div class="setpoint-inputs">
+                <div class="setpoint-input-group">
+                  <span class="input-bound">MIN</span>
+                  <div class="stepper-box">
+                    <button class="step-btn step-dec" data-target="inputSoilMin" data-step="1" type="button" aria-label="Decrease min soil moisture">−</button>
+                    <input type="number" step="1" id="inputSoilMin" value="45.0" aria-label="Minimum Soil Moisture">
+                    <button class="step-btn step-inc" data-target="inputSoilMin" data-step="1" type="button" aria-label="Increase min soil moisture">+</button>
+                  </div>
+                  <span class="input-unit">%</span>
+                </div>
+                <div class="setpoint-input-group">
+                  <span class="input-bound">MAX</span>
+                  <div class="stepper-box">
+                    <button class="step-btn step-dec" data-target="inputSoilMax" data-step="1" type="button" aria-label="Decrease max soil moisture">−</button>
+                    <input type="number" step="1" id="inputSoilMax" value="70.0" aria-label="Maximum Soil Moisture">
+                    <button class="step-btn step-inc" data-target="inputSoilMax" data-step="1" type="button" aria-label="Increase max soil moisture">+</button>
+                  </div>
+                  <span class="input-unit">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sensor Calibration Bay -->
+            <div class="calibration-bay">
+              <div class="calib-title-row">
+                <span class="calib-desc">Capacitive Sensor Calibration</span>
+                <span class="calib-adc-value" id="calibRawLabel">ADC: 2240 (1.81V)</span>
+              </div>
+              <div class="calib-action-row">
+                <button class="calib-btn" id="btnCalibDry" type="button">CALIBRATE DRY AIR (3200)</button>
+                <button class="calib-btn" id="btnCalibWet" type="button">CALIBRATE WATER (1400)</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- Lower Section: Hardware Actuator Switchboard & Audit Log -->
+      <section class="operations-deck">
+        <!-- 6-Channel Hardware Relays & Dual Flow Servomotors -->
+        <section class="instrument-panel switchboard-panel">
+          <div class="panel-top">
+            <div class="panel-heading">
+              <div class="panel-title-wrap">
+                <span class="panel-icon" aria-hidden="true">⚡</span>
+                <h3 class="panel-title-text">Actuator Switchboard</h3>
+              </div>
+              <span class="panel-sub-text">Tactile Relays &amp; Flow Control</span>
+            </div>
+            <div class="switchboard-safeties">
+              <div class="thermal-interlock-flag" title="Thermal Safety: Peltier drive interlocked to Heatsink Fan">
+                <span class="interlock-indicator"></span>
+                <span>THERMAL SHIELD ON</span>
+              </div>
+              <button class="emergency-flush-action" id="btnEmergencyFlush" type="button">EMERGENCY FLUSH (5s) 🚨</button>
+            </div>
+          </div>
+
+          <div class="switchboard-matrix">
+            <!-- Relay 1: Peltier Cooler -->
+            <div class="switch-unit" id="relay1">
+              <div class="switch-icon-wrap icon-peltier">❄️</div>
+              <div class="switch-meta">
+                <span class="unit-code">CH1 • GPIO 19</span>
+                <span class="unit-title">Peltier Cooler 12V</span>
+              </div>
+              <button class="rocker-switch" data-ch="1" id="btnRelay1" type="button" aria-pressed="false" aria-label="Toggle Peltier Cooler">
+                <span class="rocker-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Relay 2: Heatsink Fan -->
+            <div class="switch-unit" id="relay2">
+              <div class="switch-icon-wrap icon-fan">🌀</div>
+              <div class="switch-meta">
+                <span class="unit-code">CH2 • GPIO 18</span>
+                <span class="unit-title">Heatsink Fan</span>
+              </div>
+              <button class="rocker-switch" data-ch="2" id="btnRelay2" type="button" aria-pressed="false" aria-label="Toggle Heatsink Fan">
+                <span class="rocker-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Relay 3: DC Blower -->
+            <div class="switch-unit" id="relay3">
+              <div class="switch-icon-wrap icon-blower">💨</div>
+              <div class="switch-meta">
+                <span class="unit-code">CH3 • GPIO 5</span>
+                <span class="unit-title">Air Blower (Evac)</span>
+              </div>
+              <button class="rocker-switch" data-ch="3" id="btnRelay3" type="button" aria-pressed="false" aria-label="Toggle Air Blower">
+                <span class="rocker-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Relay 4: Grow Light -->
+            <div class="switch-unit" id="relay4">
+              <div class="switch-icon-wrap icon-light">💡</div>
+              <div class="switch-meta">
+                <span class="unit-code">CH4 • GPIO 17</span>
+                <span class="unit-title">Full-Spectrum LED</span>
+              </div>
+              <button class="rocker-switch" data-ch="4" id="btnRelay4" type="button" aria-pressed="false" aria-label="Toggle Grow Light">
+                <span class="rocker-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Relay 5: Spray T1 -->
+            <div class="switch-unit" id="relay5">
+              <div class="switch-icon-wrap icon-spray1">🚿</div>
+              <div class="switch-meta">
+                <span class="unit-code">CH5 • GPIO 16</span>
+                <span class="unit-title">Ultrasonic Spray T1</span>
+              </div>
+              <button class="rocker-switch" data-ch="5" id="btnRelay5" type="button" aria-pressed="false" aria-label="Toggle Spray Tank 1">
+                <span class="rocker-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Relay 6: Spray T2 -->
+            <div class="switch-unit" id="relay6">
+              <div class="switch-icon-wrap icon-spray2">🌿</div>
+              <div class="switch-meta">
+                <span class="unit-code">CH6 • GPIO 4</span>
+                <span class="unit-title">Nutrient Spray T2</span>
+              </div>
+              <button class="rocker-switch" data-ch="6" id="btnRelay6" type="button" aria-pressed="false" aria-label="Toggle Spray Tank 2">
+                <span class="rocker-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Servo Valve 1 -->
+            <div class="switch-unit valve-control-unit">
+              <div class="switch-icon-wrap icon-valve">💧</div>
+              <div class="switch-meta">
+                <span class="unit-code">SERVO 1 • GPIO 25</span>
+                <span class="unit-title">Flow Valve Tank 1</span>
+              </div>
+              <div class="valve-fader-row">
+                <input type="range" min="0" max="90" step="5" value="0" id="rangeValve1" class="precision-fader" aria-label="Valve 1 Angle">
+                <span class="angle-badge" id="valValve1">0°</span>
+              </div>
+            </div>
+
+            <!-- Servo Valve 2 -->
+            <div class="switch-unit valve-control-unit">
+              <div class="switch-icon-wrap icon-valve">🧪</div>
+              <div class="switch-meta">
+                <span class="unit-code">SERVO 2 • GPIO 26</span>
+                <span class="unit-title">Flow Valve Tank 2</span>
+              </div>
+              <div class="valve-fader-row">
+                <input type="range" min="0" max="90" step="5" value="0" id="rangeValve2" class="precision-fader" aria-label="Valve 2 Angle">
+                <span class="angle-badge" id="valValve2">0°</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Chronological System Operations Log -->
+        <section class="instrument-panel log-recorder-panel">
+          <div class="panel-top">
+            <div class="panel-heading">
+              <div class="panel-title-wrap">
+                <span class="panel-icon" aria-hidden="true">📋</span>
+                <h3 class="panel-title-text">Live Activity Audit</h3>
+              </div>
+              <span class="panel-sub-text">Chronological Events</span>
+            </div>
+            <button class="clear-audit-btn" id="btnClearLogs" type="button">CLEAR 🧹</button>
+          </div>
+
+          <div class="audit-stream" id="terminalLogs" role="log" aria-live="polite">
+            <!-- Dynamically populated chronological entries -->
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
