@@ -2,6 +2,9 @@ const http = require('http');
 const fs = require('fs');
 
 function getIndexHtml() {
+  try {
+    if (fs.existsSync('dashboard.html')) return fs.readFileSync('dashboard.html', 'utf8');
+  } catch (e) {}
   const code = fs.readFileSync('BroccoliBiosphereCabin.ino', 'utf8');
   const startMarker = 'const char INDEX_HTML[] PROGMEM = R"rawliteral(';
   const endMarker = ')rawliteral";';
