@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brocco-chan 🌸 | Waifu Brokoli Pastel + Lab Kabin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFF7FA; --card:#ffffff; --card2:#FFFBFC;
+  --line:#F9CCD7; --line2:#FCE7EC;
+  --pink:#FB7185; --pink-soft:#FFE4E6; --pink-deep:#BE123C;
+  --peach:#FB923C; --peach-soft:#FFEDD5; --peach-deep:#9A3412;
+  --matcha:#34D399; --matcha-soft:#D1FAE5; --matcha-deep:#065F46;
+  --sky:#38BDF8; --sky-soft:#E0F2FE; --sky-deep:#0369A1;
+  --lav:#C084FC; --lav-soft:#F3E8FF; --lav-deep:#6B21A8;
+  --butter:#FACC15; --butter-soft:#FEF9C3; --butter-deep:#854D0E;
+  --ink:#2E262C; --sub:#63535E; --mut:#948590;
+  --r:24px; --rb:16px; --pill:9999px;
+  --sh:0 4px 18px rgba(244,63,94,.06),0 1px 3px rgba(0,0,0,.03);
+  --sh2:0 10px 30px rgba(244,63,94,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background-color:var(--bg);
+  background-image:radial-gradient(#FAD4DF 1.2px,transparent 1.2px);
+  background-size:22px 22px;
+  color:var(--ink);font-family:'Quicksand',-apple-system,sans-serif;
+  min-height:100vh;line-height:1.5;
+}
+/* floating pastel blobs */
+.blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.5;pointer-events:none;z-index:0}
+.blob.b1{width:340px;height:340px;background:#FBCFE8;top:-90px;left:-90px}
+.blob.b2{width:300px;height:300px;background:#D1FAE5;top:20%;right:-110px}
+.blob.b3{width:280px;height:280px;background:#E0F2FE;bottom:-80px;left:30%}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 22px 70px;position:relative;z-index:1}
+@media(max-width:640px){.wrap{padding:16px 12px 50px}}
+
+/* ---------- header ---------- */
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+  background:rgba(255,255,255,.9);backdrop-filter:blur(8px);
+  border:2px solid var(--line);border-radius:28px;padding:16px 22px;box-shadow:var(--sh);
+  position:sticky;top:12px;z-index:50;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:48px;height:48px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;background:linear-gradient(135deg,#FFE4E6,#F3E8FF,#D1FAE5);
+  border:2px solid var(--line);
+}
+.brand h1{font-size:1.25rem;letter-spacing:-.02em}
+.brand p{font-size:.78rem;color:var(--sub);font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--pill);
+  font-size:.74rem;font-weight:700;border:1.5px solid currentColor;white-space:nowrap}
+.badge-optimal{color:var(--matcha-deep);background:var(--matcha-soft);border-color:#A7F3D0}
+.badge-waspada{color:var(--peach-deep);background:var(--peach-soft);border-color:#FED7AA}
+.badge-kritis{color:var(--pink-deep);background:var(--pink-soft);border-color:#FECDD3;animation:pulse 1.6s infinite}
+.badge-safe{color:var(--lav-deep);background:var(--lav-soft);border-color:#E9D5FF}
+.badge-sky{color:var(--sky-deep);background:var(--sky-soft);border-color:#BAE6FD}
+.badge-muted{color:var(--sub);background:#FDF2F4;border-color:#FCE7EC}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+.navchips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 2px 20px}
+.navchips a{
+  text-decoration:none;color:var(--sub);font-weight:700;font-size:.8rem;
+  background:#fff;border:1.5px solid var(--line);border-radius:var(--pill);padding:8px 16px;
+  transition:all .15s;
+}
+.navchips a:hover{color:var(--pink-deep);border-color:var(--pink);box-shadow:var(--sh);transform:translateY(-1px)}
+
+/* ---------- sections ---------- */
+section{margin-bottom:26px;scroll-margin-top:110px}
+.sec-title{display:flex;align-items:center;gap:10px;margin:0 4px 14px}
+.sec-title h2{font-size:1.05rem}
+.sec-title .squiggle{flex:1;height:3px;border-radius:99px;background:repeating-linear-gradient(90deg,var(--pink) 0 10px,transparent 10px 20px);opacity:.35}
+.card{background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--sh);transition:box-shadow .15s}
+.card:hover{box-shadow:var(--sh2)}
+.card-label{font-size:.74rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+
+/* ---------- home grid ---------- */
+.home-grid{display:grid;grid-template-columns:380px 1fr;gap:20px}
+@media(max-width:960px){.home-grid{grid-template-columns:1fr}}
+.waifu-card{display:flex;flex-direction:column;align-items:center;position:relative;overflow:hidden}
+.waifu-top{width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.stage-tag{font-size:.72rem;font-weight:700;color:var(--pink-deep);background:var(--pink-soft);
+  padding:4px 12px;border-radius:var(--pill);border:1px solid #FECDD3;white-space:nowrap}
+.bubble-wrap{min-height:62px;display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:8px}
+.bubble{background:#fff;border:2px solid var(--pink);border-radius:20px;padding:10px 18px;font-size:.82rem;
+  font-weight:700;text-align:center;position:relative;box-shadow:0 4px 14px rgba(244,63,94,.14);
+  transition:opacity .15s;max-width:95%;line-height:1.45}
+.bubble::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+  border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid var(--pink)}
+.waifu-svg{width:230px;height:240px;user-select:none;position:relative}
+.hit{cursor:pointer;fill:transparent;pointer-events:all}
+.hit:hover{fill:rgba(251,113,133,.12)}
+@keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes hop{0%{transform:scale(1,1)}30%{transform:scale(1.12,.88) translateY(6px)}60%{transform:scale(.92,1.12) translateY(-16px)}100%{transform:scale(1,1)}}
+@keyframes jiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes floatz{0%{opacity:0;transform:translate(0,0) scale(.6)}50%{opacity:1}100%{opacity:0;transform:translate(14px,-22px) scale(1.2)}}
+@keyframes mtalk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.35)}}
+.waifu-svg svg{animation:idle 3s ease-in-out infinite;transform-origin:bottom center}
+.bounce svg{animation:hop .45s cubic-bezier(.16,1,.3,1)!important}
+.talking .mouth-happy,.talking .mouth-pant,.talking .mouth-sad,.talking .mouth-shiver{transform-origin:100px 116px;animation:mtalk .18s linear infinite}
+.morph-sprout{display:none}.morph-microgreen{display:block}.morph-harvest{display:none}
+.stage-sprout .morph-sprout{display:block}.stage-sprout .morph-microgreen,.stage-sprout .morph-harvest{display:none}
+.stage-harvest .morph-harvest{display:block}.stage-harvest .morph-sprout,.stage-harvest .morph-microgreen{display:none}
+.eyes-open{display:block}.eyes-sleep,.eyes-sad{display:none}
+.mouth-happy{display:block}.mouth-pant,.mouth-shiver,.mouth-sad{display:none}
+.prop-sweat,.prop-icicles,.prop-zzz{display:none}.prop-sparkles{display:block}
+.mood-cold svg{animation:jiggle .12s linear infinite}
+.mood-cold .mouth-happy{display:none}.mood-cold .mouth-shiver{display:block}
+.mood-cold .prop-icicles{display:block}.mood-cold .prop-sparkles{display:none}
+.mood-heat .mouth-happy,.mood-heat-crit .mouth-happy{display:none}
+.mood-heat .mouth-pant,.mood-heat-crit .mouth-pant{display:block}
+.mood-heat .prop-sweat,.mood-heat-crit .prop-sweat{display:block}
+.mood-thirsty .eyes-open{display:none}.mood-thirsty .eyes-sad{display:block}
+.mood-thirsty .mouth-happy{display:none}.mood-thirsty .mouth-sad{display:block}
+.mood-thirsty .prop-sparkles{display:none}
+.mood-sleep .eyes-open{display:none}.mood-sleep .eyes-sleep{display:block}
+.mood-sleep .prop-zzz{display:block}.mood-sleep .prop-sparkles{display:none}
+.mood-sleep .zzz-item{animation:floatz 2.5s infinite}.mood-sleep .z2{animation-delay:.6s}.mood-sleep .z3{animation-delay:1.2s}
+.heart{position:absolute;font-size:1rem;pointer-events:none;animation:heartup 1s ease-out forwards;z-index:5}
+@keyframes heartup{from{opacity:1;transform:translateY(0) scale(.8)}to{opacity:0;transform:translateY(-70px) scale(1.3)}}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px;width:100%;margin-top:12px;justify-content:center}
+.btn-n{flex:1 1 45%;font-size:.78rem;font-weight:700;padding:10px 12px;border-radius:14px;
+  border:1.5px solid transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;font-family:inherit}
+.btn-n:active{transform:scale(.96)}
+.n-water{background:var(--sky-soft);color:var(--sky-deep);border-color:#BAE6FD}
+.n-water:hover{background:#BAE6FD}
+.n-vit{background:var(--lav-soft);color:var(--lav-deep);border-color:#E9D5FF}
+.n-vit:hover{background:#E9D5FF}
+.n-breeze{background:var(--matcha-soft);color:var(--matcha-deep);border-color:#A7F3D0}
+.n-breeze:hover{background:#A7F3D0}
+.n-light{background:var(--butter-soft);color:var(--butter-deep);border-color:#FDE047}
+.n-light:hover{background:#FEF08A}
+.btn-s{font-size:.72rem;font-weight:700;padding:6px 14px;background:#FDF2F4;border:1px solid var(--line);
+  border-radius:var(--pill);color:var(--pink-deep);cursor:pointer;margin-top:6px;transition:all .15s;font-family:inherit}
+.btn-s:hover{background:var(--pink-soft)}
+.chat{width:100%;margin-top:12px;background:linear-gradient(135deg,#FFF1F2,#FDF4FF,#ECFDF5);
+  border:1.5px solid var(--line);border-radius:18px;padding:12px}
+.chat h4{font-size:.76rem;color:var(--pink-deep);margin-bottom:8px}
+.chat-row{display:flex;gap:6px}
+.chat input{flex:1;border:1.5px solid #FECDD3;border-radius:12px;padding:8px 10px;font-family:inherit;
+  font-size:.8rem;font-weight:600;outline:none;background:#fff;color:var(--ink);min-width:0}
+.chat input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-soft)}
+.live{margin-top:8px;font-size:.7rem;font-weight:600;color:var(--sub);background:rgba(255,255,255,.75);
+  border:1px dashed #F9A8D4;border-radius:12px;padding:6px 10px;line-height:1.6}
+.live b{color:var(--pink-deep)}
+
+/* side column */
+.side{display:flex;flex-direction:column;gap:16px}
+.care-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.care-grid{grid-template-columns:1fr}}
+.care{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:14px 16px;box-shadow:var(--sh)}
+.care-h{display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;margin-bottom:6px;gap:8px}
+.track{height:12px;background:#FCE7EC;border-radius:var(--pill);overflow:hidden;margin-top:6px}
+.fill{height:100%;border-radius:var(--pill);transform-origin:left;transition:transform .35s cubic-bezier(.16,1,.3,1)}
+.f-water{background:linear-gradient(90deg,#38BDF8,#0284C7)}
+.f-energy{background:linear-gradient(90deg,#FACC15,#F59E0B)}
+.f-nut{background:linear-gradient(90deg,#C084FC,#9333EA)}
+.f-happy{background:linear-gradient(90deg,#FDE047,#F472B6,#34D399)}
+.diary{background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:18px}
+.tip{background:var(--pink-soft);border:1.5px dashed #F472B6;border-radius:16px;padding:12px 16px;font-size:.82rem;color:var(--pink-deep);line-height:1.55;margin-top:10px}
+.pcs-row{display:flex;gap:14px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.pcs-ring{width:86px;height:86px;flex:none}
+.pcs-meta{font-size:.78rem;color:var(--sub);font-weight:600}
+
+/* ---------- telemetry ---------- */
+.tele-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.scard{border-width:2px}
+.scard .big{font-size:2.2rem;font-weight:700;letter-spacing:-.03em;margin:4px 0 8px;display:flex;align-items:baseline;gap:4px}
+.scard .unit{font-size:.9rem;font-weight:600;color:var(--sub)}
+.t-small{font-size:.72rem;font-weight:600;color:var(--mut)}
+.rtrack{height:6px;background:#F1EDE4;border-radius:var(--pill);position:relative;margin-top:10px}
+.rsafe{position:absolute;top:0;bottom:0;background:#BBF7D0;border-radius:var(--pill)}
+.rpin{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;background:var(--matcha-deep);
+  border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transform:translateX(-50%);transition:left .3s}
+.diag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
+.diag{background:#FFFAFA;border:1.5px solid var(--line);border-radius:18px;padding:16px}
+.diag h4{font-size:.82rem;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line2)}
+.gpio{font-family:'JetBrains Mono',monospace;font-size:.66rem;font-weight:700;color:var(--sky-deep);
+  background:var(--sky-soft);padding:2px 8px;border-radius:var(--pill);border:1px solid #BAE6FD;white-space:nowrap}
+.drow{display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:.76rem}
+.drow span:first-child{color:var(--sub);font-weight:600}
+.drow .v{font-family:'JetBrains Mono',monospace;font-weight:700}
+
+/* ---------- controls ---------- */
+.matrix{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:12px;margin-top:10px}
+.node{background:#FFFAFA;border:1.5px solid var(--line);border-radius:16px;padding:12px 10px;text-align:center;transition:all .15s}
+.node.on{border-color:var(--matcha);background:var(--matcha-soft)}
+.node.on-fan{border-color:var(--sky);background:var(--sky-soft)}
+.node .led{width:10px;height:10px;border-radius:50%;background:#E2E8F0;margin:6px auto;transition:all .2s}
+.node.on .led{background:var(--matcha);box-shadow:0 0 6px rgba(52,211,153,.6)}
+.node.on-fan .led{background:var(--sky);box-shadow:0 0 6px rgba(56,189,248,.6)}
+.node .nm{font-size:.68rem;font-weight:700;color:var(--sub);text-transform:uppercase}
+.node .vl{font-size:.76rem;font-weight:700}
+.tgl{margin-top:8px;width:100%;padding:7px 8px;font-size:.72rem;font-weight:700;border-radius:10px;
+  border:1.5px solid #D5CEBE;background:#fff;cursor:pointer;transition:all .15s;font-family:inherit}
+.tgl:hover{border-color:var(--pink)}
+.tgl.on{background:var(--matcha-soft);color:var(--matcha-deep);border-color:var(--matcha)}
+.lock{font-size:.64rem;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;
+  padding:2px 4px;margin-top:4px;display:none;font-weight:600}
+.tanks{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+@media(max-width:640px){.tanks{grid-template-columns:1fr}}
+.tank{background:#FFFAFA;border:1px solid var(--line);border-radius:16px;padding:12px 16px}
+.tank-h{display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;margin-bottom:6px;gap:8px}
+.tbar{height:12px;background:#FCE7EC;border-radius:var(--pill);overflow:hidden;margin-bottom:8px}
+.tfill{height:100%;transform-origin:left;transition:transform .35s}
+.btn{background:#fff;color:var(--ink);border:1.5px solid var(--line);border-radius:14px;padding:9px 14px;
+  font-size:.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;font-family:inherit}
+.btn:hover{background:#FDF2F4;border-color:var(--line)}
+.btn:active{transform:scale(.97)}
+.btn-mint{background:var(--matcha-soft);border-color:#A7F3D0;color:var(--matcha-deep)}
+.btn-mint:hover{background:#A7F3D0}
+.btn-red{background:var(--pink-soft);border-color:#FECDD3;color:var(--pink-deep)}
+.btn-red:hover{background:#FECDD3}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:12px;
+  background:#FAF8F2;border:1.5px solid #E8E3D6;border-radius:18px;padding:16px}
+.sliders input{width:100%;accent-color:var(--matcha-deep);cursor:pointer}
+.sl-h{display:flex;justify-content:space-between;font-size:.74rem;font-weight:700;margin-bottom:4px;gap:8px}
+.ctl-rows{margin-top:4px}
+.trow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.trow:last-child{border-bottom:none}
+.trow .tt{font-size:.84rem;font-weight:700}
+.trow .ts{font-size:.74rem;color:var(--sub)}
+
+/* ---------- history ---------- */
+.chart-box{width:100%;height:190px;background:#FFFAFA;border:1.5px solid var(--line);border-radius:16px;padding:10px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:860px){.duo{grid-template-columns:1fr}}
+.term{background:#fff;border:1.5px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--sh)}
+.term-h{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line2);
+  font-size:.74rem;font-weight:700;color:var(--pink-deep);text-transform:uppercase;letter-spacing:.04em}
+.tdot{width:9px;height:9px;border-radius:50%}
+.term-b{display:flex;flex-direction:column;gap:8px;font-size:.8rem;min-height:100px}
+.tlog{display:flex;gap:8px;line-height:1.45}
+.ttime{color:var(--sky-deep);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:.72rem;white-space:nowrap}
+.tmsg{font-weight:600}
+footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🌸</div>
+      <div><h1>Brocco-chan • Waifu Brokoli Pastel</h1><p>Smart Microgreens Cabin &amp; Talking-Tom Pet Studio 🎀</p></div>
+    </div>
+    <div class="chips">
+      <span id="badgeStatus" class="badge badge-optimal"><span class="dot"></span><span id="badgeStatusText">KONDISI PRIMA</span></span>
+      <span class="badge badge-sky">IP: <span id="valIp" style="margin-left:3px">ESP32</span></span>
+      <span class="badge badge-muted">Aktif: <span id="valUptime" style="margin-left:3px;font-family:'JetBrains Mono',monospace">00:00:00</span></span>
+    </div>
+  </header>
+
+  <nav class="navchips">
+    <a href="#home">🌸 Brocco-chan</a><a href="#iklim">🌡️ Iklim</a><a href="#kontrol">🎛️ Kontrol</a><a href="#riwayat">📈 Riwayat</a>
+  </nav>
+
+  <!-- ================= HOME ================= -->
+  <section id="home">
+    <div class="sec-title"><h2>🌸 Brocco-chan Home</h2><div class="squiggle"></div><span id="broccoMoodBadge" class="badge badge-optimal">SANGAT PRIMA</span></div>
+    <div class="home-grid">
+      <div class="card waifu-card" id="waifuCard">
+        <div class="waifu-top"><span class="card-label">Waifu Avatar 🎀</span><span id="broccoStageBadge" class="stage-tag">Tahap 2: Waifu Pastel Brocco-chan 🌸💖</span></div>
+        <div class="bubble-wrap"><div class="bubble"><span id="broccoSpeech">Hai manis! 🌸 Aku Brocco-chan, waifu brokolimu! Ketik sesuatu, akan aku tirukan! 🎀</span></div></div>
+        <div id="broccoMascot" class="waifu-svg stage-microgreen mood-happy">
+          <svg id="broccoSvg" viewBox="0 0 200 220" width="100%" height="100%">
+            <defs>
+              <linearGradient id="stemGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#A7F3D0"/><stop offset="100%" stop-color="#34D399"/></linearGradient>
+              <linearGradient id="crownGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6EE7B7"/><stop offset="50%" stop-color="#34D399"/><stop offset="100%" stop-color="#059669"/></linearGradient>
+              <linearGradient id="harvestGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34D399"/><stop offset="50%" stop-color="#059669"/><stop offset="100%" stop-color="#064E3B"/></linearGradient>
+              <radialGradient id="blushGrad" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(251,113,133,.9)"/><stop offset="100%" stop-color="rgba(251,113,133,0)"/></radialGradient>
+              <linearGradient id="waifuHairPastel" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#D1FAE5"/><stop offset="45%" stop-color="#A7F3D0"/><stop offset="100%" stop-color="#6EE7B7"/></linearGradient>
+              <linearGradient id="waifuSkinPastel" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#FFF7F7"/><stop offset="100%" stop-color="#FFE4E6"/></linearGradient>
+              <linearGradient id="waifuDressPastel" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FBCFE8"/><stop offset="50%" stop-color="#F9A8D4"/><stop offset="100%" stop-color="#C084FC"/></linearGradient>
+            </defs>
+            <ellipse cx="100" cy="202" rx="55" ry="9" fill="rgba(244,63,94,.12)"/>
+            <g id="waifuHairBack">
+              <path d="M 48,95 C 38,140 42,180 55,195 C 60,180 58,140 62,115 Z" fill="url(#waifuHairPastel)" stroke="#F9A8D4" stroke-width="2"/>
+              <path d="M 152,95 C 162,140 158,180 145,195 C 140,180 142,140 138,115 Z" fill="url(#waifuHairPastel)" stroke="#F9A8D4" stroke-width="2"/>
+              <ellipse cx="52" cy="190" rx="8" ry="6" fill="#FBCFE8" stroke="#F9A8D4" stroke-width="1.5"/>
+              <ellipse cx="148" cy="190" rx="8" ry="6" fill="#FBCFE8" stroke="#F9A8D4" stroke-width="1.5"/>
+            </g>
+            <g class="morph-sprout">
+              <path d="M 90,150 C 88,175 86,195 95,200 C 104,202 110,200 112,195 C 114,180 108,160 104,150 Z" fill="url(#waifuDressPastel)" stroke="#9D5C8B" stroke-width="2"/>
+              <circle cx="78" cy="138" r="14" fill="url(#waifuHairPastel)" stroke="#F9A8D4" stroke-width="2"/>
+              <circle cx="122" cy="138" r="14" fill="url(#waifuHairPastel)" stroke="#F9A8D4" stroke-width="2"/>
+              <circle cx="82" cy="140" r="6" fill="#34D399" stroke="#065F46" stroke-width="1.5"/>
+              <circle cx="118" cy="140" r="6" fill="#34D399" stroke="#065F46" stroke-width="1.5"/>
+              <path d="M 85,128 Q 100,105 125,120 Q 135,100 145,105" fill="none" stroke="#FB7185" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="148" cy="106" r="5" fill="#FACC15"/>
+            </g>
+            <g class="morph-microgreen">
+              <g class="brocco-body-group">
+                <path d="M 82,125 C 75,155 70,185 80,195 C 90,200 110,200 120,195 C 130,185 125,155 118,125 Z" fill="url(#waifuDressPastel)" stroke="#9D5C8B" stroke-width="2"/>
+                <path d="M 82,160 Q 100,168 118,160 L 114,175 Q 100,182 86,175 Z" fill="#FFF1F2" stroke="#F9A8D4" stroke-width="1.5"/>
+                <path class="brocco-arm-left" d="M 76,155 C 55,150 50,135 62,130 C 72,135 74,148 76,155 Z" fill="url(#waifuSkinPastel)" stroke="#9D5C8B" stroke-width="1.8"/>
+                <path class="brocco-arm-right" d="M 124,155 C 145,150 150,135 138,130 C 128,135 126,148 124,155 Z" fill="url(#waifuSkinPastel)" stroke="#9D5C8B" stroke-width="1.8"/>
+                <path d="M 92,122 L 92,130 Q 100,135 108,130 L 108,122 Z" fill="url(#waifuSkinPastel)" stroke="#9D5C8B" stroke-width="1.5"/>
+              </g>
+              <g class="brocco-crown-group" stroke="#065F46" stroke-width="2">
+                <circle cx="58" cy="62" r="20" fill="url(#crownGrad)"/><circle cx="142" cy="62" r="20" fill="url(#crownGrad)"/>
+                <circle cx="65" cy="85" r="30" fill="url(#crownGrad)" opacity=".95"/><circle cx="135" cy="85" r="30" fill="url(#crownGrad)" opacity=".95"/>
+                <circle cx="100" cy="58" r="34" fill="url(#crownGrad)"/><circle cx="100" cy="88" r="28" fill="url(#crownGrad)"/>
+                <circle cx="75" cy="62" r="4" fill="#FEF9C3" stroke="none"/><circle cx="120" cy="58" r="3.5" fill="#FEF9C3" stroke="none"/><circle cx="100" cy="75" r="4" fill="#FEF9C3" stroke="none"/>
+              </g>
+              <g class="brocco-flower-pin">
+                <path d="M 100,22 Q 102,10 112,8" fill="none" stroke="#065F46" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="132" cy="46" r="6" fill="#FB7185"/><circle cx="140" cy="51" r="6" fill="#FDA4AF"/><circle cx="137" cy="60" r="6" fill="#FFE4E6"/>
+                <circle cx="127" cy="60" r="6" fill="#FDA4AF"/><circle cx="124" cy="51" r="6" fill="#FB7185"/><circle cx="132" cy="53.5" r="4" fill="#FACC15"/>
+              </g>
+            </g>
+            <g class="morph-harvest">
+              <g class="brocco-body-group">
+                <path d="M 80,120 C 72,155 68,185 80,195 C 90,202 110,202 120,195 C 132,185 128,155 120,120 Z" fill="url(#waifuDressPastel)" stroke="#6B21A8" stroke-width="2.5"/>
+                <path d="M 74,152 C 50,146 45,130 58,125 C 70,130 72,145 74,152 Z" fill="url(#waifuSkinPastel)" stroke="#6B21A8" stroke-width="2"/>
+                <path d="M 126,152 C 150,146 155,130 142,125 C 130,130 128,145 126,152 Z" fill="url(#waifuSkinPastel)" stroke="#6B21A8" stroke-width="2"/>
+              </g>
+              <g stroke="#064E3B" stroke-width="2.5">
+                <circle cx="50" cy="88" r="36" fill="url(#harvestGrad)"/><circle cx="150" cy="88" r="36" fill="url(#harvestGrad)"/>
+                <circle cx="68" cy="62" r="38" fill="url(#harvestGrad)"/><circle cx="132" cy="62" r="38" fill="url(#harvestGrad)"/>
+                <circle cx="100" cy="48" r="42" fill="url(#harvestGrad)"/><circle cx="100" cy="88" r="40" fill="url(#harvestGrad)"/>
+              </g>
+              <path d="M 70,118 Q 100,128 130,118" fill="none" stroke="#FACC15" stroke-width="5" stroke-linecap="round"/>
+              <polygon points="100,122 95,134 105,134" fill="#FACC15"/>
+            </g>
+            <g class="brocco-face">
+              <ellipse cx="100" cy="105" rx="32" ry="28" fill="url(#waifuSkinPastel)" stroke="#9D5C8B" stroke-width="1.5" opacity=".95"/>
+              <ellipse class="brocco-cheek" cx="72" cy="115" rx="9" ry="6" fill="url(#blushGrad)"/>
+              <ellipse class="brocco-cheek" cx="128" cy="115" rx="9" ry="6" fill="url(#blushGrad)"/>
+              <g class="eyes-open">
+                <ellipse cx="80" cy="98" rx="8.5" ry="11.5" fill="#1F1A1D"/><ellipse cx="120" cy="98" rx="8.5" ry="11.5" fill="#1F1A1D"/>
+                <circle cx="82.5" cy="94" r="4" fill="#fff"/><circle cx="77.5" cy="102" r="2" fill="#fff"/>
+                <circle cx="122.5" cy="94" r="4" fill="#fff"/><circle cx="117.5" cy="102" r="2" fill="#fff"/>
+              </g>
+              <g class="eyes-sleep">
+                <path d="M 72,100 Q 80,107 88,100" fill="none" stroke="#1F1A1D" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 112,100 Q 120,107 128,100" fill="none" stroke="#1F1A1D" stroke-width="3" stroke-linecap="round"/>
+              </g>
+              <g class="eyes-sad">
+                <path d="M 72,102 Q 80,95 88,102" fill="none" stroke="#1F1A1D" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 112,102 Q 120,95 128,102" fill="none" stroke="#1F1A1D" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 76,108 C 74,115 80,118 80,113 C 80,110 77,108 76,108 Z" fill="#38BDF8"/>
+              </g>
+              <path class="mouth-happy" d="M 90,112 Q 100,124 110,112" fill="none" stroke="#1F1A1D" stroke-width="3" stroke-linecap="round"/>
+              <path class="mouth-pant" d="M 92,112 Q 100,126 108,112 Z" fill="#FB7185" stroke="#1F1A1D" stroke-width="2"/>
+              <path class="mouth-shiver" d="M 91,114 Q 95,110 100,114 Q 105,110 109,114" fill="none" stroke="#1F1A1D" stroke-width="2.5" stroke-linecap="round"/>
+              <path class="mouth-sad" d="M 92,118 Q 100,110 108,118" fill="none" stroke="#1F1A1D" stroke-width="3" stroke-linecap="round"/>
+            </g>
+            <g class="brocco-props">
+              <g class="prop-sweat">
+                <path d="M 148,70 C 145,78 152,82 152,77 C 152,73 149,70 148,70 Z" fill="#38BDF8"/>
+                <path d="M 52,75 C 49,83 56,87 56,82 C 56,78 53,75 52,75 Z" fill="#38BDF8"/>
+              </g>
+              <g class="prop-icicles">
+                <polygon points="62,115 65,130 68,115" fill="#38BDF8"/><polygon points="98,135 101,152 104,135" fill="#38BDF8"/><polygon points="132,115 135,130 138,115" fill="#38BDF8"/>
+              </g>
+              <g class="prop-zzz">
+                <text x="145" y="60" fill="#C084FC" font-size="16" font-weight="700" class="zzz-item z1">Z</text>
+                <text x="160" y="45" fill="#FB7185" font-size="12" font-weight="700" class="zzz-item z2">z</text>
+                <text x="172" y="32" fill="#C084FC" font-size="9" font-weight="700" class="zzz-item z3">z</text>
+              </g>
+              <g class="prop-sparkles">
+                <polygon points="45,50 48,42 50,50 58,52 50,54 48,62 45,54 37,52" fill="#FACC15"/>
+                <polygon points="155,95 157,90 159,95 164,96 159,97 157,102 155,97 150,96" fill="#FACC15"/>
+              </g>
+            </g>
+            <path id="hitCrown" class="hit" d="M 40,30 L 160,30 L 160,105 L 40,105 Z" onclick="handleZoneTap('crown')"/>
+            <path id="hitCheeks" class="hit" d="M 50,105 L 150,105 L 150,130 L 50,130 Z" onclick="handleZoneTap('cheeks')"/>
+            <path id="hitArms" class="hit" d="M 30,130 L 78,130 L 78,175 L 30,175 Z M 122,130 L 170,130 L 170,175 L 122,175 Z" onclick="handleZoneTap('arms')"/>
+            <path id="hitStem" class="hit" d="M 78,130 L 122,130 L 122,205 L 78,205 Z" onclick="handleZoneTap('stem')"/>
+          </svg>
+        </div>
+        <div class="actions">
+          <button class="btn-n n-water" onclick="nurtureBrocco('water')">🌸 Beri Minum</button>
+          <button class="btn-n n-vit" onclick="nurtureBrocco('nutrient')">✨ Beri Vitamin</button>
+          <button class="btn-n n-breeze" onclick="nurtureBrocco('breeze')">🍃 Kipas Semilir</button>
+          <button class="btn-n n-light" onclick="nurtureBrocco('light')">☀️ Atur Lampu</button>
+          <button id="btnSoundToggle" class="btn-s" onclick="toggleAudio()">🎵 Musik: Nyala</button>
+          <button id="btnVoiceToggle" class="btn-s" onclick="toggleWaifuVoice()">🗣️ Suara Brocco-chan: Nyala</button>
+        </div>
+        <div class="chat">
+          <h4>💬 Talking-Tom Brocco-chan — ketik, dia menirukan dengan suara imut! 🎀</h4>
+          <div class="chat-row">
+            <input id="waifuInput" maxlength="120" placeholder="Contoh: halo cantik, berapa suhu sekarang?" onkeydown="if(event.key==='Enter')waifuRepeat()">
+            <button class="btn btn-mint" onclick="waifuRepeat()">Tirukan!</button>
+            <button class="btn" onclick="waifuReport()" title="Bacakan semua data server">📊</button>
+          </div>
+          <div id="waifuLive" class="live">Menunggu telemetri…</div>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="care-grid">
+          <div class="care"><div class="care-h"><span>💧 Hidrasi</span><span id="careValWater" style="color:var(--sky-deep)">--%</span></div><div class="track"><div id="careFillWater" class="fill f-water" style="transform:scaleX(0)"></div></div></div>
+          <div class="care"><div class="care-h"><span>☀️ Cahaya</span><span id="careValLight" style="color:var(--butter-deep)">--</span></div><div class="track"><div id="careFillLight" class="fill f-energy" style="transform:scaleX(0)"></div></div></div>
+          <div class="care"><div class="care-h"><span>🧪 Vitamin</span><span id="careValNutrient" style="color:var(--lav-deep)">--%</span></div><div class="track"><div id="careFillNutrient" class="fill f-nut" style="transform:scaleX(0)"></div></div></div>
+          <div class="care"><div class="care-h"><span>🌸 Bahagia</span><span id="careValHappy" style="color:var(--pink-deep)">--%</span></div><div class="track"><div id="careFillHappy" class="fill f-happy" style="transform:scaleX(0)"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-label">💖 Plant Comfort Score</span><span id="pcsBadge" class="badge badge-optimal">--%</span></div>
+          <div class="pcs-row">
+            <svg class="pcs-ring" viewBox="0 0 86 86"><circle cx="43" cy="43" r="36" fill="none" stroke="#FCE7EC" stroke-width="10"/><circle id="pcsArc" cx="43" cy="43" r="36" fill="none" stroke="#FB7185" stroke-width="10" stroke-linecap="round" stroke-dasharray="226.2" stroke-dashoffset="226.2" transform="rotate(-90 43 43)" style="transition:stroke-dashoffset .4s"/></svg>
+            <div class="pcs-meta"><div style="font-size:1.6rem;font-weight:700;color:var(--ink)"><span id="valPcs">--</span><span style="font-size:.9rem;color:var(--sub)"> %</span></div><div id="pcsNote">Menghitung kenyamanan dari suhu, RH &amp; VPD…</div></div>
+          </div>
+        </div>
+        <div class="diary">
+          <div class="card-head"><span class="card-label">📔 Buku Harian Kebun 🎀</span></div>
+          <div class="tip"><b>🌸 Catatan Brocco-chan:</b> <span id="compAgronomiTip">Menghubungkan ke kabin…</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= IKLIM ================= -->
+  <section id="iklim">
+    <div class="sec-title"><h2>🌡️ Iklim Kabin</h2><div class="squiggle"></div><span class="badge badge-sky">LIVE 1 dtk</span></div>
+    <div class="tele-grid">
+      <div class="card scard" style="border-color:#FECDD3"><div class="card-head"><span class="card-label">🌡️ Suhu Udara</span><span id="lblSafeTemp" class="t-small">Aman: 18.0–22.0°C</span></div><div class="big"><span id="valTemp">--.-</span><span class="unit">°C</span></div><div id="badgeTemp" class="badge badge-optimal">…</div><div class="rtrack"><div id="zoneSafeTemp" class="rsafe" style="left:32%;width:16%"></div><div id="pinTemp" class="rpin" style="left:41%"></div></div></div>
+      <div class="card scard" style="border-color:#BAE6FD"><div class="card-head"><span class="card-label">💧 Kelembapan Udara</span><span id="lblSafeRh" class="t-small">Aman: 50.0–65.0%</span></div><div class="big"><span id="valRh">--.-</span><span class="unit">% RH</span></div><div id="badgeRh" class="badge badge-optimal">…</div><div class="rtrack"><div id="zoneSafeRh" class="rsafe" style="left:50%;width:15%"></div><div id="pinRh" class="rpin" style="left:58%"></div></div></div>
+      <div class="card scard" style="border-color:#A7F3D0"><div class="card-head"><span class="card-label">🌱 Media Tanam</span><span id="lblSafeSoil" class="t-small">Aman: 45.0–70.0%</span></div><div class="big"><span id="valSoil">--.-</span><span class="unit">%</span></div><div id="badgeSoil" class="badge badge-optimal">…</div><div class="rtrack"><div id="zoneSafeSoil" class="rsafe" style="left:45%;width:25%"></div><div id="pinSoil" class="rpin" style="left:56%"></div></div></div>
+      <div class="card scard" style="border-color:#E9D5FF"><div class="card-head"><span class="card-label">✨ VPD</span><span class="t-small">Aman: 0.40–0.80 kPa</span></div><div class="big"><span id="valVpd">-.--</span><span class="unit">kPa</span></div><div id="badgeVpd" class="badge badge-optimal">…</div><div class="rtrack"><div class="rsafe" style="left:20%;width:20%"></div><div id="pinVpd" class="rpin" style="left:31%"></div></div></div>
+    </div>
+    <div class="diag-grid">
+      <div class="diag"><h4><span>🌡️ DHT22 Suhu &amp; RH</span><span class="gpio">GPIO 14</span></h4>
+        <div class="drow"><span>VPsat jenuh:</span><span class="v" id="diagVpSat">-- kPa</span></div>
+        <div class="drow"><span>VPact aktual:</span><span class="v" id="diagVpAct">-- kPa</span></div>
+        <div class="drow"><span>Polling:</span><span class="v">2000 ms</span></div>
+        <div class="drow"><span>Sinyal:</span><span class="v" id="diagDhtStatus" style="color:var(--matcha-deep)">…</span></div>
+      </div>
+      <div class="diag"><h4><span>🌱 Soil ADC</span><span class="gpio">GPIO 34</span></h4>
+        <div class="drow"><span>Raw ADC 12-bit:</span><span class="v" id="diagRawSoil">-- / 4095</span></div>
+        <div class="drow"><span>Tegangan:</span><span class="v" id="diagVoltSoil">-- V</span></div>
+        <div class="drow"><span>Kering ↔ Basah:</span><span class="v" id="diagCalibRange">3200 ↔ 1400</span></div>
+        <div style="display:flex;gap:6px;margin-top:8px"><button class="btn" style="flex:1;padding:6px;font-size:.72rem" onclick="calibrateSoilPoint('dry')">Set Kering</button><button class="btn" style="flex:1;padding:6px;font-size:.72rem" onclick="calibrateSoilPoint('wet')">Set Basah</button></div>
+      </div>
+      <div class="diag"><h4><span>💓 Detak Sistem</span><span class="gpio">GPIO 27</span></h4>
+        <div class="drow"><span>Kedip LED:</span><span class="v" id="diagLedBlink">1000 ms</span></div>
+        <div class="drow"><span>Interlock:</span><span class="v" style="color:var(--matcha-deep)">Aktif &amp; Aman 🔒</span></div>
+        <div class="drow"><span>Purge jamur:</span><span class="v">30 mnt / 45 dtk</span></div>
+        <div class="drow"><span>Pinout:</span><span class="v" id="diagPins" style="font-size:.66rem">…</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= KONTROL ================= -->
+  <section id="kontrol">
+    <div class="sec-title"><h2>🎛️ Kontrol Aktuator</h2><div class="squiggle"></div><span id="lblMode" class="badge badge-optimal">OTOMATIS</span></div>
+    <div class="card">
+      <div class="card-head"><div><span class="card-label">Matriks Relay &amp; Aktuator</span><div style="font-size:.74rem;color:var(--sub)">Ketuk untuk override langsung — otomatis pindah ke MANUAL</div></div><span class="badge badge-sky">ACTIVE-LOW 12V</span></div>
+      <div class="matrix">
+        <div id="nodePeltier" class="node"><span class="gpio">GPIO 19</span><div class="led"></div><div class="nm">CH1 Peltier</div><div id="stPeltier" class="vl">OFF</div><button id="btnRelay1" class="tgl" onclick="toggleHardwareRelay(1)">Nyalakan</button><div id="badgeInterlockFan" class="lock">🔒 Heatsink Auto-ON</div></div>
+        <div id="nodeFan" class="node"><span class="gpio">GPIO 18</span><div class="led"></div><div class="nm">CH2 Heatsink</div><div id="stFan" class="vl">OFF</div><button id="btnRelay2" class="tgl" onclick="toggleHardwareRelay(2)">Nyalakan</button><div id="badgeInterlockPeltier" class="lock">🔒 Proteksi</div></div>
+        <div id="nodeBlower" class="node"><span class="gpio">GPIO 5</span><div class="led"></div><div class="nm">CH3 Blower</div><div id="stBlower" class="vl">OFF</div><button id="btnRelay3" class="tgl" onclick="toggleHardwareRelay(3)">Nyalakan</button></div>
+        <div id="nodeLight" class="node"><span class="gpio">GPIO 17</span><div class="led"></div><div class="nm">CH4 Grow Light</div><div id="stLight" class="vl">OFF</div><button id="btnRelay4" class="tgl" onclick="toggleHardwareRelay(4)">Nyalakan</button></div>
+        <div id="nodeSpray1" class="node"><span class="gpio">GPIO 16</span><div class="led"></div><div class="nm">CH5 Spray T1</div><div id="stSpray1" class="vl">OFF</div><button id="btnRelay5" class="tgl" onclick="toggleHardwareRelay(5)">Nyalakan</button></div>
+        <div id="nodeSpray2" class="node"><span class="gpio">GPIO 4</span><div class="led"></div><div class="nm">CH6 Spray T2</div><div id="stSpray2" class="vl">OFF</div><button id="btnRelay6" class="tgl" onclick="toggleHardwareRelay(6)">Nyalakan</button></div>
+        <div id="nodeValve1" class="node"><span class="gpio">GPIO 25</span><div class="nm" style="margin-top:8px">Katup Servo 1</div><div id="stValve1" class="vl" style="color:var(--sky-deep)">0° (TUTUP)</div><div style="display:flex;gap:4px;margin-top:6px"><button class="tgl" style="flex:1" onclick="setServoAngle(1,0)">0°</button><button class="tgl" style="flex:1" onclick="setServoAngle(1,90)">90°</button></div></div>
+        <div id="nodeValve2" class="node"><span class="gpio">GPIO 26</span><div class="nm" style="margin-top:8px">Katup Servo 2</div><div id="stValve2" class="vl" style="color:var(--matcha-deep)">0° (TUTUP)</div><div style="display:flex;gap:4px;margin-top:6px"><button class="tgl" style="flex:1" onclick="setServoAngle(2,0)">0°</button><button class="tgl" style="flex:1" onclick="setServoAngle(2,90)">90°</button></div></div>
+      </div>
+      <div class="tanks">
+        <div class="tank"><div class="tank-h"><span>🍼 Tangki 1 • Air Baku</span><span id="valTank1Text" style="color:var(--sky-deep)">-- mL</span></div><div class="tbar"><div id="tank1Bar" class="tfill" style="background:#38BDF8;transform:scaleX(1)"></div></div><button class="btn" style="width:100%;font-size:.75rem" onclick="sendControl('action=refill&tank=1')">Isi Ulang Tangki 1</button></div>
+        <div class="tank"><div class="tank-h"><span>🧪 Tangki 2 • Nutrisi</span><span id="valTank2Text" style="color:var(--lav-deep)">-- mL</span></div><div class="tbar"><div id="tank2Bar" class="tfill" style="background:#C084FC;transform:scaleX(1)"></div></div><button class="btn" style="width:100%;font-size:.75rem" onclick="sendControl('action=refill&tank=2')">Isi Ulang Tangki 2</button></div>
+      </div>
+      <div class="sliders">
+        <div><div class="sl-h"><span>🌡️ Target Suhu</span><span id="valSliderTemp">18.0 - 22.0 °C</span></div><input type="range" min="15" max="28" step="0.5" value="20" oninput="adjustThresholdSetpoint('temp',this.value)"></div>
+        <div><div class="sl-h"><span>💧 Target RH</span><span id="valSliderRh">50.0 - 65.0 %</span></div><input type="range" min="40" max="80" step="1" value="58" oninput="adjustThresholdSetpoint('rh',this.value)"></div>
+        <div><div class="sl-h"><span>🌱 Target Tanah</span><span id="valSliderSoil">45.0 - 70.0 %</span></div><input type="range" min="30" max="85" step="1" value="55" oninput="adjustThresholdSetpoint('soil',this.value)"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><span class="card-label">🌱 Siklus Tumbuh</span><span id="lblTank" class="badge badge-muted">Tangki 1</span></div>
+      <div class="ctl-rows">
+        <div class="trow"><div><div class="tt">Mode Kontrol</div><div class="ts">Otomatis iklim vs manual override</div></div><button id="btnModeToggle" class="btn btn-mint" onclick="toggleMode()">MODE MANUAL</button></div>
+        <div class="trow"><div><div class="tt">Fase Tumbuh</div><div class="ts">Perkecambahan vs autotrofik</div></div><div style="display:flex;gap:6px"><button class="btn" onclick="sendControl('action=phase&val=1')">🌙 Semai</button><button class="btn" onclick="sendControl('action=phase&val=2')">☀️ Terang</button></div></div>
+        <div class="trow"><div><div class="tt">Hari Budidaya (1–10)</div><div class="ts">Sinkron otomatis dengan fase</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn" onclick="adjustDay(-1)">−1</button><b id="lblDayCount">Hari 1</b><button class="btn" onclick="adjustDay(1)">+1</button></div></div>
+        <div class="trow"><div><div class="tt" style="color:var(--pink-deep)">⚡ Siram Darurat</div><div class="ts">Semprot 5 detik Tangki 1</div></div><button class="btn btn-red" onclick="sendControl('action=flush')">Siram Darurat</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RIWAYAT ================= -->
+  <section id="riwayat">
+    <div class="sec-title"><h2>📈 Riwayat &amp; Diary</h2><div class="squiggle"></div></div>
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head"><span class="card-label">📈 Telemetri 20 titik terakhir</span><div style="display:flex;gap:14px;font-size:.74rem;font-weight:700"><span>🟢 Suhu</span><span>🔵 RH</span></div></div>
+      <div class="chart-box"><svg id="trendSvg" width="100%" height="100%" viewBox="0 0 800 160" preserveAspectRatio="none">
+        <line x1="40" y1="20" x2="780" y2="20" stroke="#FBCFE8" stroke-dasharray="3"/><line x1="40" y1="55" x2="780" y2="55" stroke="#FBCFE8" stroke-dasharray="3"/>
+        <line x1="40" y1="90" x2="780" y2="90" stroke="#FBCFE8" stroke-dasharray="3"/><line x1="40" y1="125" x2="780" y2="125" stroke="#FBCFE8" stroke-dasharray="3"/>
+        <text x="5" y="24" fill="#948590" font-size="10" font-family="monospace">50°/100%</text>
+        <text x="5" y="75" fill="#948590" font-size="10" font-family="monospace">25°/50%</text>
+        <text x="5" y="130" fill="#948590" font-size="10" font-family="monospace">0°/0%</text>
+        <polyline id="rhPolyline" fill="none" stroke="#0284C7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points=""/>
+        <polyline id="tempPolyline" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points=""/>
+      </svg></div>
+    </div>
+    <div class="term">
+      <div class="term-h"><span class="tdot" style="background:#FB7185"></span><span class="tdot" style="background:#FACC15"></span><span class="tdot" style="background:#34D399"></span><span style="margin-left:4px">📔 Log Sistem 🌸</span></div>
+      <div id="terminalLogs" class="term-b"><div class="tlog"><span class="ttime">[00:00:00]</span><span class="tmsg">Menghubungkan ke Brocco-chan…</span></div></div>
+    </div>
+  </section>
+
+  <footer>Made with 💖 for Brocco-chan • ESP32 Biosphere Cabin • <span id="footUptime">--</span></footer>
+</div>
+
+<script>
+let isAutoMode=true,currentDay=1,audioCtx=null,lastTelemetry=null;
+let audioMuted=(localStorage.getItem('brocco_audio_muted')==='1');
+let waifuVoiceOn=(localStorage.getItem('brocco_waifu_voice')!=='0');
+function initAudio(){if(!audioCtx){const C=window.AudioContext||window.webkitAudioContext;if(C)audioCtx=new C()}if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume()}
+function playChirp(t){if(audioMuted)return;initAudio();if(!audioCtx)return;const n=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);
+if(t==='pet_giggle'){o.type='sine';o.frequency.setValueAtTime(587.33,n);o.frequency.exponentialRampToValueAtTime(880,n+.12);g.gain.setValueAtTime(.2,n);g.gain.exponentialRampToValueAtTime(.001,n+.12);o.start(n);o.stop(n+.12)}
+else if(t==='feed_water'){o.type='triangle';o.frequency.setValueAtTime(440,n);o.frequency.linearRampToValueAtTime(880,n+.08);o.frequency.linearRampToValueAtTime(659,n+.16);o.frequency.linearRampToValueAtTime(1046.5,n+.24);g.gain.setValueAtTime(.22,n);g.gain.exponentialRampToValueAtTime(.01,n+.28);o.start(n);o.stop(n+.28)}
+else if(t==='feed_vitamin'){o.type='sine';[523.25,659.25,783.99,1046.5].forEach((f,i)=>o.frequency.setValueAtTime(f,n+i*.07));g.gain.setValueAtTime(.2,n);g.gain.exponentialRampToValueAtTime(.01,n+.3);o.start(n);o.stop(n+.3)}
+else if(t==='breeze_fan'){o.type='sine';o.frequency.setValueAtTime(329.63,n);o.frequency.exponentialRampToValueAtTime(164.81,n+.25);g.gain.setValueAtTime(.14,n);g.gain.exponentialRampToValueAtTime(.01,n+.25);o.start(n);o.stop(n+.25)}
+else{o.type='sine';o.frequency.setValueAtTime(300,n);o.frequency.exponentialRampToValueAtTime(600,n+.15);g.gain.setValueAtTime(.2,n);g.gain.exponentialRampToValueAtTime(.01,n+.15);o.start(n);o.stop(n+.15)}}
+function toggleAudio(){audioMuted=!audioMuted;localStorage.setItem('brocco_audio_muted',audioMuted?'1':'0');document.getElementById('btnSoundToggle').innerText=audioMuted?'🔇 Musik: Mati':'🎵 Musik: Nyala'}
+function speakWaifu(text){if(!waifuVoiceOn)return;try{if(!('speechSynthesis' in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text.replace(/[🌸✨💖🌿🎀💧🍃☀️📊⚡👑🌱🍼🧪💓📔🌡️]/g,''));u.lang='id-ID';u.pitch=1.7;u.rate=1.05;u.volume=.9;const vs=window.speechSynthesis.getVoices();const f=vs.find(v=>/female|zira|samantha|indonesia|id/i.test(v.name+v.lang));if(f)u.voice=f;window.speechSynthesis.speak(u);const m=document.getElementById('broccoMascot');if(m){m.classList.add('talking');u.onend=()=>m.classList.remove('talking');setTimeout(()=>m.classList.remove('talking'),3500)}}catch(e){}}
+function toggleWaifuVoice(){waifuVoiceOn=!waifuVoiceOn;localStorage.setItem('brocco_waifu_voice',waifuVoiceOn?'1':'0');document.getElementById('btnVoiceToggle').innerText=waifuVoiceOn?'🗣️ Suara Brocco-chan: Nyala':'🔇 Suara Brocco-chan: Mati';if(!waifuVoiceOn&&('speechSynthesis' in window))window.speechSynthesis.cancel()}
+let speechLockUntil=0;
+function setBroccoSpeech(text,force=false){const now=Date.now();if(!force&&now<speechLockUntil)return;const b=document.getElementById('broccoSpeech');if(b&&b.innerText!==text){b.style.opacity='0';setTimeout(()=>{b.innerText=text;b.style.opacity='1'},120)}if(force)speechLockUntil=now+4000;if(force)speakWaifu(text)}
+function burstHearts(){const c=document.getElementById('waifuCard');if(!c)return;for(let i=0;i<6;i++){const s=document.createElement('span');s.className='heart';s.innerText=['💖','🌸','✨','💧','🎀'][i%5];s.style.left=(30+Math.random()*40)+'%';s.style.top='45%';c.appendChild(s);setTimeout(()=>s.remove(),1000)}}
+function handleZoneTap(zone){initAudio();const m=document.getElementById('broccoMascot');if(m){m.classList.remove('bounce');void m.offsetWidth;m.classList.add('bounce')}burstHearts();
+if(zone==='crown'){playChirp('pet_giggle');setBroccoSpeech('Ehehe~ mahkota brokoliku yang pastel disentuh! Geli! 🌸 Hihihi!',true)}
+else if(zone==='cheeks'){playChirp('feed_vitamin');setBroccoSpeech('Kyaa~ pipiku merona pink pastel! Senang disayang! 💖',true)}
+else if(zone==='arms'){playChirp('pet_giggle');setBroccoSpeech('Tos! Aku Brocco-chan, waifu brokoli pastelmu! Semangat tumbuh! 🌿✨',true)}
+else{playChirp('hop');setBroccoSpeech('Hup! Dress pastel-ku berkibar! Lompat ceria! 🎀',true)}}
+function nurtureBrocco(a){initAudio();
+if(a==='water'){playChirp('feed_water');setBroccoSpeech('Aah, segaar! Semprotan air baku aktif! 💧✨',true);sendControl('action=flush')}
+else if(a==='nutrient'){playChirp('feed_vitamin');setBroccoSpeech('Yummy! Booster vitamin mikro diserap! 🌸✨',true);sendControl('action=toggleRelay&ch=6')}
+else if(a==='breeze'){playChirp('breeze_fan');setBroccoSpeech('Wussshh! Hembusan angin sepoi-sepoi bikin sejuk! 🍃',true);sendControl('action=toggleRelay&ch=3')}
+else{playChirp('feed_vitamin');setBroccoSpeech('Cahaya LED Grow Light disesuaikan! ☀️',true);sendControl('action=toggleRelay&ch=4')}}
+function waifuRepeat(){initAudio();const i=document.getElementById('waifuInput');const t=(i.value||'').trim();if(!t){setBroccoSpeech('Ketik dulu dong, nanti aku tirukan dengan suara imut! 🎀',true);return}playChirp('pet_giggle');setBroccoSpeech(t+' ~nyaa! 🌸',true);i.value=''}
+function waifuReport(){initAudio();const d=lastTelemetry;if(!d){setBroccoSpeech('Tunggu sebentar ya, aku lagi mengambil data dari server... ✨',true);return}
+setBroccoSpeech(`Hai! Aku Brocco-chan! Suhu ${d.temp.toFixed(1)} derajat, kelembapan ${d.rh.toFixed(1)} persen, tanah ${d.soil.toFixed(1)} persen, VPD ${d.vpd.toFixed(2)}, skor nyaman ${Math.round(d.pcs)} persen. Tangki satu ${Math.round(d.tank1Vol)} mili, tangki dua ${Math.round(d.tank2Vol)} mili. Status ${d.status}. Hari ke ${d.day}, fase ${d.phase}. 🌸📊`,true)}
+function updateBroccoMood(d){const m=document.getElementById('broccoMascot'),badge=document.getElementById('broccoMoodBadge'),stage=document.getElementById('broccoStageBadge'),tip=document.getElementById('compAgronomiTip');
+if(!m)return;m.classList.remove('stage-sprout','stage-microgreen','stage-harvest');
+if(d.day<=3){m.classList.add('stage-sprout');stage.innerText='Tahap 1: Baby Brocco-chan 🌱🎀'}
+else if(d.day<=7){m.classList.add('stage-microgreen');stage.innerText='Tahap 2: Waifu Pastel Brocco-chan 🌸💖'}
+else{m.classList.add('stage-harvest');stage.innerText='Tahap 3: Harvest Queen Brocco-chan! 👑✨'}
+m.classList.remove('mood-happy','mood-cold','mood-heat','mood-heat-crit','mood-thirsty','mood-sleep');
+if(d.status==='SAFEMODE'){m.classList.add('mood-panic');badge.className='badge badge-safe';badge.innerText='PANIK';tip.innerText='Periksa kabel sensor DHT22 GPIO 14! Safe mode aktif.';setBroccoSpeech('Waduh sensor bermasalah! Safe mode darurat!')}
+else if(!d.relays.light){m.classList.add('mood-sleep');badge.className='badge badge-optimal';badge.innerText=d.phase===1?'TIDUR NYENYAK':'TIDUR MALAM';tip.innerText=d.phase===1?'Fase blackout hari 1–3: biarkan gelap agar kecambah memanjang cantik.':'Siklus gelap 8 jam penting untuk respirasi brokoli.';setBroccoSpeech(d.phase===1?'Zzz... fase gelap, aku bobo dulu ya...':'Zzz... malam fotoperiode, istirahat dulu...')}
+else if(d.temp>24){m.classList.add('mood-heat-crit');badge.className='badge badge-kritis';badge.innerText='OVERHEAT';tip.innerText='Bahaya! Suhu >24°C memicu busuk akar Pythium! Nyalakan Peltier.';setBroccoSpeech('Aduh kepanasan! Dinginkan aku cepat!')}
+else if(d.temp>22){m.classList.add('mood-heat');badge.className='badge badge-waspada';badge.innerText='AGAK GERAH';tip.innerText='Peltier CH1 + heatsink fan aktif mendinginkan ke 18–22°C.';setBroccoSpeech('Agak gerah nih, Peltier lagi kerja!')}
+else if(d.temp<18){m.classList.add('mood-cold');badge.className='badge badge-waspada';badge.innerText='MENGGIGIL';tip.innerText='Suhu <18°C memperlambat fotosintesis microgreens.';setBroccoSpeech('Brrr dingin! Aku menggigil!')}
+else if(d.soil<45){m.classList.add('mood-thirsty');badge.className='badge badge-waspada';badge.innerText='HAUS SEKALI';tip.innerText='Semprot Tangki 1 untuk menaikkan media ke 45–70%.';setBroccoSpeech('Tanahku kering! Minta minum dong! 💧')}
+else{m.classList.add('mood-happy');badge.className='badge badge-optimal';badge.innerText='SANGAT PRIMA';tip.innerText='Homeostasis sempurna. Pertahankan 18–22°C & RH 50–65%.';setBroccoSpeech('Prima! Sejuk dan aku tumbuh cepat! 🌸✨')}
+const cw=document.getElementById('careValWater'),fw=document.getElementById('careFillWater');
+if(cw){cw.innerText=Math.round(d.soil)+'% '+(d.soil>=45&&d.soil<=70?'(Pas)':d.soil<45?'(Haus)':'(Basah)');fw.style.transform=`scaleX(${Math.min(1,Math.max(0,d.soil/100))})`}
+const cl=document.getElementById('careValLight'),fl=document.getElementById('careFillLight');
+if(cl){cl.innerText=d.relays.light?'16 Jam (Aktif)':'Malam (Off)';fl.style.transform=`scaleX(${d.relays.light?1:.2})`}
+const cn=document.getElementById('careValNutrient'),fn=document.getElementById('careFillNutrient');
+if(cn){const r=Math.min(1,Math.max(0,d.tank2Vol/1000));cn.innerText=Math.round(r*100)+'%';fn.style.transform=`scaleX(${r})`}
+const ch=document.getElementById('careValHappy'),fh=document.getElementById('careFillHappy');
+if(ch){const r=Math.min(1,Math.max(0,d.pcs/100));ch.innerText=Math.round(d.pcs)+'% '+(d.pcs>=85?'(Prima)':'(Waspada)');fh.style.transform=`scaleX(${r})`}
+const pt=document.getElementById('pinTemp');if(pt)pt.style.left=Math.min(100,Math.max(0,(d.temp-10)/25*100))+'%';
+const pr=document.getElementById('pinRh');if(pr)pr.style.left=Math.min(100,Math.max(0,d.rh))+'%';
+const ps=document.getElementById('pinSoil');if(ps)ps.style.left=Math.min(100,Math.max(0,d.soil))+'%';
+const pv=document.getElementById('pinVpd');if(pv)pv.style.left=Math.min(100,Math.max(0,d.vpd/2*100))+'%'}
+async function fetchTelemetry(){try{const r=await fetch('/api/telemetry');if(!r.ok)return;renderDashboard(await r.json())}catch(e){console.warn(e)}}
+async function toggleHardwareRelay(ch){initAudio();playChirp('pet_giggle');await sendControl('action=toggleRelay&ch='+ch)}
+async function setServoAngle(s,a){initAudio();playChirp('pet_giggle');await sendControl('action=setServo&servo='+s+'&angle='+a)}
+async function adjustThresholdSetpoint(t,v){v=parseFloat(v);
+if(t==='temp'){const a=(v-2).toFixed(1),b=(v+2).toFixed(1);document.getElementById('valSliderTemp').innerText=`${a} - ${b} °C`;document.getElementById('lblSafeTemp').innerText=`Aman: ${a}–${b}°C`;document.getElementById('zoneSafeTemp').style.left=Math.max(0,(a-10)/25*100)+'%';document.getElementById('zoneSafeTemp').style.width=Math.max(5,(b-a)/25*100)+'%';await sendControl(`action=setThreshold&param=tempMin&val=${a}`);await sendControl(`action=setThreshold&param=tempMax&val=${b}`)}
+else if(t==='rh'){const a=(v-7.5).toFixed(1),b=(+v+7.5).toFixed(1);document.getElementById('valSliderRh').innerText=`${a} - ${b} %`;document.getElementById('lblSafeRh').innerText=`Aman: ${a}–${b}%`;document.getElementById('zoneSafeRh').style.left=a+'%';document.getElementById('zoneSafeRh').style.width=(b-a)+'%';await sendControl(`action=setThreshold&param=rhMin&val=${a}`);await sendControl(`action=setThreshold&param=rhMax&val=${b}`)}
+else{const a=(v-12.5).toFixed(1),b=(+v+12.5).toFixed(1);document.getElementById('valSliderSoil').innerText=`${a} - ${b} %`;document.getElementById('lblSafeSoil').innerText=`Aman: ${a}–${b}%`;document.getElementById('zoneSafeSoil').style.left=a+'%';document.getElementById('zoneSafeSoil').style.width=(b-a)+'%';await sendControl(`action=setThreshold&param=soilMin&val=${a}`);await sendControl(`action=setThreshold&param=soilMax&val=${b}`)}}
+async function calibrateSoilPoint(t){if(confirm(`Set titik ${t.toUpperCase()} ke ADC saat ini?`))await sendControl('action=calibrateSoil&type='+t)}
+function updateBadge(id,ok,crit,a,b,c){const e=document.getElementById(id);if(ok){e.className='badge badge-optimal';e.innerText=a}else if(crit){e.className='badge badge-kritis';e.innerText=c}else{e.className='badge badge-waspada';e.innerText=b}}
+function setNode(id,tx,on,fan){const e=document.getElementById(id),t=document.getElementById(tx);if(on){e.className='node '+(fan?'on-fan':'on');t.innerText='ON'}else{e.className='node';t.innerText='OFF'}}
+function renderSvgHistory(ts,rs){const W=740,H=110,X=40,Y=20,n=Math.max(ts.length,rs.length);if(n<2)return;let tp=[],rp=[];
+for(let i=0;i<n;i++){const x=X+i/(n-1)*W;tp.push(`${x.toFixed(1)},${(Y+H-Math.min(50,Math.max(0,ts[i]||0))/50*H).toFixed(1)}`);rp.push(`${x.toFixed(1)},${(Y+H-Math.min(100,Math.max(0,rs[i]||0))/100*H).toFixed(1)}`)}
+document.getElementById('tempPolyline').setAttribute('points',tp.join(' '));document.getElementById('rhPolyline').setAttribute('points',rp.join(' '))}
+function renderDashboard(d){lastTelemetry=d;
+document.getElementById('valIp').innerText=d.ip||'ESP32';document.getElementById('valUptime').innerText=d.uptime||'00:00:00';document.getElementById('footUptime').innerText='uptime '+(d.uptime||'--');
+const sb=document.getElementById('badgeStatus'),st=document.getElementById('badgeStatusText');
+sb.className='badge '+(d.status==='OPTIMAL'?'badge-optimal':d.status==='WASPADA'?'badge-waspada':d.status==='SAFEMODE'?'badge-safe':'badge-kritis');
+st.innerText=d.status==='OPTIMAL'?'KONDISI PRIMA':d.status;
+document.getElementById('valTemp').innerText=d.temp.toFixed(1);document.getElementById('valRh').innerText=d.rh.toFixed(1);
+document.getElementById('valSoil').innerText=d.soil.toFixed(1);document.getElementById('valVpd').innerText=d.vpd.toFixed(2);
+updateBadge('badgeTemp',d.temp>=18&&d.temp<=22,d.temp>24,'🌸 NYAMAN SEKALI','AGAK HANGAT','OVERHEAT');
+updateBadge('badgeRh',d.rh>=50&&d.rh<=65,d.rh>75,'💧 SEGAR OPTIMAL','WASPADA','PEKAT');
+updateBadge('badgeSoil',d.soil>=45&&d.soil<=70,d.soil<35,'🌱 LEMBAP PAS','WASPADA','KERING');
+updateBadge('badgeVpd',d.vpd>=.4&&d.vpd<=.8,d.vpd<.2||d.vpd>1.2,'✨ SEIMBANG','DRIFT','KRITIS');
+const pcs=Math.round(d.pcs);document.getElementById('valPcs').innerText=pcs;
+const pb=document.getElementById('pcsBadge');pb.innerText=pcs+'% '+(pcs>=85?'PRIMA':pcs>=60?'SEDANG':'RENDAH');pb.className='badge '+(pcs>=85?'badge-optimal':pcs>=60?'badge-waspada':'badge-kritis');
+document.getElementById('pcsArc').style.strokeDashoffset=(226.2*(1-Math.min(1,Math.max(0,d.pcs/100)))).toFixed(1);
+document.getElementById('pcsNote').innerText=`Suhu ${d.temp.toFixed(1)}°C • RH ${d.rh.toFixed(1)}% • VPD ${d.vpd.toFixed(2)} kPa`;
+document.getElementById('valTank1Text').innerText=Math.round(d.tank1Vol)+' mL';document.getElementById('valTank2Text').innerText=Math.round(d.tank2Vol)+' mL';
+document.getElementById('tank1Bar').style.transform=`scaleX(${Math.min(1,Math.max(0,d.tank1Vol/1000))})`;
+document.getElementById('tank2Bar').style.transform=`scaleX(${Math.min(1,Math.max(0,d.tank2Vol/1000))})`;
+currentDay=d.day;document.getElementById('lblDayCount').innerText='Hari '+d.day;
+document.getElementById('lblTank').innerText='Tangki '+(d.activeTank||1)+(d.phase===1?' • Semai':' • Terang');
+setNode('nodePeltier','stPeltier',d.relays.peltier);setNode('nodeFan','stFan',d.relays.fan,true);
+setNode('nodeBlower','stBlower',d.relays.blower);setNode('nodeLight','stLight',d.relays.light);
+setNode('nodeSpray1','stSpray1',d.relays.spray1);setNode('nodeSpray2','stSpray2',d.relays.spray2);
+[['btnRelay1',d.relays.peltier],['btnRelay2',d.relays.fan],['btnRelay3',d.relays.blower],['btnRelay4',d.relays.light],['btnRelay5',d.relays.spray1],['btnRelay6',d.relays.spray2]].forEach(([id,on])=>{const b=document.getElementById(id);if(b){b.innerText=on?'Matikan':'Nyalakan';b.className='tgl '+(on?'on':'')}});
+document.getElementById('badgeInterlockFan').style.display=d.relays.peltier?'block':'none';
+document.getElementById('badgeInterlockPeltier').style.display=(d.relays.peltier&&d.relays.fan)?'block':'none';
+if(d.rawSoilAdc!==undefined){document.getElementById('diagRawSoil').innerText=d.rawSoilAdc+' / 4095';document.getElementById('diagVoltSoil').innerText=(d.soilVoltage||(d.rawSoilAdc*3.3/4095).toFixed(2))+' V'}
+if(d.vpSat!==undefined)document.getElementById('diagVpSat').innerText=d.vpSat.toFixed(2)+' kPa';
+if(d.vpAct!==undefined)document.getElementById('diagVpAct').innerText=d.vpAct.toFixed(2)+' kPa';
+if(d.thresholds){document.getElementById('diagCalibRange').innerText=`${d.thresholds.dryRaw??3200} ↔ ${d.thresholds.wetRaw??1400}`}
+if(d.pins){document.getElementById('diagPins').innerText=`DHT${d.pins.dht} S${d.pins.soil} P${d.pins.peltier} F${d.pins.fan} B${d.pins.blower} L${d.pins.light}`}
+if(d.status==='SAFEMODE'){document.getElementById('diagDhtStatus').innerText='CRITICAL (NaN)';document.getElementById('diagDhtStatus').style.color='var(--pink-deep)';document.getElementById('diagLedBlink').innerText='100 ms (Darurat)'}
+else{document.getElementById('diagDhtStatus').innerText='Valid (Normal)';document.getElementById('diagDhtStatus').style.color='var(--matcha-deep)';document.getElementById('diagLedBlink').innerText='1000 ms (Normal)'}
+document.getElementById('stValve1').innerText=d.valves.v1+'° '+(d.valves.v1>0?'(BUKA)':'(TUTUP)');
+document.getElementById('stValve2').innerText=d.valves.v2+'° '+(d.valves.v2>0?'(BUKA)':'(TUTUP)');
+isAutoMode=d.autoMode;document.getElementById('lblMode').innerText=isAutoMode?'OTOMATIS':'MANUAL';
+document.getElementById('lblMode').className='badge '+(isAutoMode?'badge-optimal':'badge-waspada');
+document.getElementById('btnModeToggle').innerText=isAutoMode?'MODE MANUAL':'MODE OTOMATIS';
+if(d.history)renderSvgHistory(d.history.temp,d.history.rh);
+if(d.logs&&d.logs.length){document.getElementById('terminalLogs').innerHTML=d.logs.map(l=>`<div class="tlog"><span class="ttime">[${l.t}]</span><span class="tmsg">${l.m}</span></div>`).join('')}
+const live=document.getElementById('waifuLive');
+if(live){const r=d.relays,v=d.valves;live.innerHTML=`🌸 <b>${d.temp.toFixed(1)}°C</b> 💧 <b>${d.rh.toFixed(1)}%</b> 🌱 <b>${d.soil.toFixed(1)}%</b> ✨ VPD <b>${d.vpd.toFixed(2)}</b> 💖 PCS <b>${pcs}%</b><br>🍼 T1 <b>${Math.round(d.tank1Vol)}mL</b> 🧪 T2 <b>${Math.round(d.tank2Vol)}mL</b> • ADC <b>${d.rawSoilAdc}</b> ${d.soilVoltage}V • ${d.autoMode?'AUTO':'MANUAL'} Day <b>${d.day}</b> Ph${d.phase} ${d.status}<br>Relay P${r.peltier?'1':'0'} F${r.fan?'1':'0'} B${r.blower?'1':'0'} L${r.light?'1':'0'} S1${r.spray1?'1':'0'} S2${r.spray2?'1':'0'} • Valve ${v.v1}°/${v.v2}°`}
+updateBroccoMood(d)}
+async function sendControl(q){try{await fetch('/api/control?'+q,{method:'POST'});fetchTelemetry()}catch(e){console.error(e)}}
+function toggleMode(){sendControl('action=mode&val='+(isAutoMode?'manual':'auto'))}
+function adjustDay(x){let v=currentDay+x;v=Math.min(10,Math.max(1,v));sendControl('action=day&val='+v)}
+document.getElementById('btnSoundToggle').innerText=audioMuted?'🔇 Musik: Mati':'🎵 Musik: Nyala';
+document.getElementById('btnVoiceToggle').innerText=waifuVoiceOn?'🗣️ Suara Brocco-chan: Nyala':'🔇 Suara Brocco-chan: Mati';
+if('speechSynthesis' in window)speechSynthesis.getVoices();
+setInterval(fetchTelemetry,1000);fetchTelemetry();
+</script>
+</body>
+</html>
