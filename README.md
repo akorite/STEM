@@ -174,7 +174,7 @@ curl -X POST "http://192.168.1.50/api/control?action=toggleRelay&ch=6"
 ## Notes and troubleshooting
 
 - **DHT11 reads NaN** — check the data wire on GPIO 32, 3.3 V supply, and a 10 kΩ pull-up to 3.3 V if the module does not already include one. The firmware needs three consecutive good frames after an error to leave safe mode.
-- **Relay clicks at boot** — many ESP32 pins float low before `setup()`. The sketch preloads every relay OFF before setting `pinMode`, but a brief hardware click can still happen on some boards. A relay board with input pull-ups or an external 10 kΩ pull-up to 3.3 V on each IN pin prevents it.
+- **Relay clicks at boot** — many ESP32 pins float low before `setup()`. The sketch preloads every relay OFF before setting `pinMode`, but a brief hardware click can still happen on some boards. Use a relay board that already has input pull-ups, or add a 10 kΩ pull-up from each IN pin to the relay board's own logic voltage (check whether it is 3.3 V or 5 V).
 - **Pumps do not run in auto** — check that the matching soil channel is not flagged as a fault and the measured moisture is below `soilMin`. Automatic pulses have a 60 s cooldown.
 - **Only one dashboard is needed** — the ESP32 serves `dashboard.html` directly. `server.js` is only for local development without hardware and serves both consoles.
 - **ADC readings** — GPIO 34/35 are input-only and belong to ADC1, which keeps working while Wi-Fi is active.
