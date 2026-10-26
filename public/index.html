@@ -53,6 +53,7 @@
         <div class="host-link-station">
           <input type="text" id="targetHostInput" class="host-input" placeholder="http://127.0.0.1:8080" spellcheck="false" title="Target REST API address" aria-label="Target REST API Host">
           <button class="host-connect-btn" id="btnConnectTarget" type="button">LINK ⚡</button>
+          <button class="host-connect-btn" id="btnOta" type="button" style="display:none" title="Open the ESP32 OTA firmware uploader">OTA ⬆</button>
         </div>
 
         <!-- System Clocks & Diagnostics -->
@@ -259,8 +260,28 @@
         <section class="station-block station-fluidics" id="cardTanks">
           <div class="station-header">
             <div class="station-title-wrap">
-              <span class="station-icon" aria-hidden="true">💧</span>
+              <span class="station-icon capy-station-icon" title="Capy the watering buddy" aria-label="Capybara">
+                <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+                  <ellipse cx="32" cy="45" rx="21" ry="13" fill="#B9825A" stroke="#7C4F33" stroke-width="2"/>
+                  <ellipse cx="17" cy="54" rx="6" ry="3.5" fill="#8B5E3C"/>
+                  <ellipse cx="47" cy="54" rx="6" ry="3.5" fill="#8B5E3C"/>
+                  <rect x="14" y="12" width="36" height="30" rx="14" fill="#C08A60" stroke="#7C4F33" stroke-width="2"/>
+                  <ellipse cx="20" cy="14" rx="5" ry="4" fill="#8B5E3C"/>
+                  <ellipse cx="44" cy="14" rx="5" ry="4" fill="#8B5E3C"/>
+                  <ellipse cx="32" cy="34" rx="12" ry="7" fill="#E8C9A8"/>
+                  <ellipse cx="32" cy="31" rx="4" ry="3" fill="#4A2F22"/>
+                  <circle cx="24" cy="25" r="2.2" fill="#2B1C14"/>
+                  <circle cx="40" cy="25" r="2.2" fill="#2B1C14"/>
+                  <circle cx="24.7" cy="24.2" r="0.7" fill="#fff"/>
+                  <circle cx="40.7" cy="24.2" r="0.7" fill="#fff"/>
+                  <circle cx="19" cy="31" r="3" fill="#F3A6A6" opacity=".7"/>
+                  <circle cx="45" cy="31" r="3" fill="#F3A6A6" opacity=".7"/>
+                  <path d="M32 34 v3 M32 37 q-3 2 -5 0 M32 37 q3 2 5 0" fill="none" stroke="#4A2F22" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M33 12 q-2 -7 4 -9 q2 6 -1 9" fill="#34D399" stroke="#059669" stroke-width="1.5"/>
+                </svg>
+              </span>
               <h2 class="station-title">Dual-Zone Watering</h2>
+              <span class="capy-name">Capy</span>
             </div>
             <span class="station-tag tag-sky" id="activeTankLabel">AUTO ZONES</span>
           </div>
@@ -508,7 +529,7 @@
             <div class="switch-unit" id="relay2">
               <div class="switch-icon-wrap icon-fan">🌀</div>
               <div class="switch-meta">
-                <span class="unit-code">4CH IN3 • GPIO 27</span>
+                <span class="unit-code">4CH IN2 + 2CH IN2<br>GPIO 27</span>
                 <span class="unit-title">Fan Gabungan</span>
               </div>
               <button class="rocker-switch" data-ch="2" id="btnRelay2" type="button" aria-pressed="false" aria-label="Toggle Combined Fan">
@@ -520,7 +541,7 @@
             <div class="switch-unit" id="relay3">
               <div class="switch-icon-wrap icon-blower">🔌</div>
               <div class="switch-meta">
-                <span class="unit-code">4CH IN2 • GPIO 26</span>
+                <span class="unit-code">4CH IN3 • GPIO 26</span>
                 <span class="unit-title">Spare Actuator</span>
               </div>
               <button class="rocker-switch" data-ch="3" id="btnRelay3" type="button" aria-pressed="false" aria-label="Toggle Spare Relay">
@@ -544,7 +565,7 @@
             <div class="switch-unit" id="relay5">
               <div class="switch-icon-wrap icon-light">🌈</div>
               <div class="switch-meta">
-                <span class="unit-code">2CH IN1 • GPIO 13</span>
+                <span class="unit-code">2CH IN1 • GPIO 32</span>
                 <span class="unit-title">LED Strip</span>
               </div>
               <button class="rocker-switch" data-ch="5" id="btnRelay5" type="button" aria-pressed="false" aria-label="Toggle LED Strip">
@@ -556,7 +577,7 @@
             <div class="switch-unit" id="relay6">
               <div class="switch-icon-wrap icon-spray1">💧</div>
               <div class="switch-meta">
-                <span class="unit-code">2CH IN2 • GPIO 18</span>
+                <span class="unit-code">2CH IN2 • GPIO 19</span>
                 <span class="unit-title">DC Pump 1 • Zone A</span>
               </div>
               <button class="rocker-switch" data-ch="6" id="btnRelay6" type="button" aria-pressed="false" aria-label="Toggle Pump 1">
@@ -568,7 +589,7 @@
             <div class="switch-unit" id="relay7">
               <div class="switch-icon-wrap icon-spray2">🚿</div>
               <div class="switch-meta">
-                <span class="unit-code">1CH IN • GPIO 16</span>
+                <span class="unit-code">2CH IN1 • GPIO 18</span>
                 <span class="unit-title">DC Pump 2 • Zone B</span>
               </div>
               <button class="rocker-switch" data-ch="7" id="btnRelay7" type="button" aria-pressed="false" aria-label="Toggle Pump 2">

@@ -60,16 +60,16 @@ let state = {
     wet2: 1400
   },
   pins: {
-    dht: 32,
+    dht: 4,
     soil1: 34,
     soil2: 35,
     peltier: 25,
     spare: 26,
     fan: 27,
     growLight: 14,
-    ledStrip: 13,
-    pump1: 18,
-    pump2: 16,
+    ledStrip: 32,
+    pump1: 19,
+    pump2: 18,
     statusLed: 2
   },
   history: {
@@ -293,6 +293,7 @@ function payload() {
     relays: state.relays,
     thresholds: state.thresholds,
     pins: state.pins,
+    ota: { web: false, arduino: false, hostname: null },
     history: state.history,
     logs: state.logs
   };

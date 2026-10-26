@@ -4,21 +4,22 @@
  *   Cultivation engine for broccoli microgreens, remapped for the SchoolSTEM relay layout
  * =========================================================================================
  *   Target board : ESP32 Dev Module (WROOM-32 / NodeMCU ESP32)
- *   Relay boards : 4-CH + 2-CH + 1-CH, active-LOW inputs
+ *   Relay boards : 4-CH + two 2-CH boards (Fan Out + LED, Pump 1 + Pump 2)
  *   Sensors      : DHT11 (air temperature + RH), 2x capacitive soil moisture V2.0
  *
  *   PIN MAP (chosen from the wiring table; alternates are documented per line)
  *   ---------------------------------------------------------------------------------------
  *   4-CH relay IN1  GPIO 25  Peltier 12V element
- *   4-CH relay IN2  GPIO 26  Spare / free actuator
- *   4-CH relay IN3  GPIO 27  Fan (outside + inside fans wired in parallel)
- *   4-CH relay IN4  GPIO 14  HPL grow light
- *   2-CH relay IN1  GPIO 13  LED strip / room lighting          (alternate: GPIO 12)
- *   2-CH relay IN2  GPIO 18  DC pump 1 / watering zone A        (alternate: GPIO 19)
- *   1-CH relay IN   GPIO 16  DC pump 2 / watering zone B        (alternate: GPIO 17)
+ *   4-CH relay IN2  GPIO 27  Fan In relay
+ *   4-CH relay IN3  GPIO 26  Spare / free actuator
+ *   4-CH relay IN4  GPIO 14  HPL grow light (2x top)
+ *   2-CH "ujung" IN2 GPIO 27 Fan Out relay (Y-spliced to the same GPIO 27)
+ *   2-CH "ujung" IN1 GPIO 32 LED strip / bottom lighting       (alternate: GPIO 12)
+ *   2-CH "tengah" IN2 GPIO 19 DC pump 1 / watering zone A
+ *   2-CH "tengah" IN1 GPIO 18 DC pump 2 / watering zone B       (alternate: GPIO 17)
  *   Soil moisture 1 GPIO 34  Capacitive V2.0 AOUT (ADC1)
  *   Soil moisture 2 GPIO 35  Capacitive V2.0 AOUT (ADC1)
- *   DHT11 DATA      GPIO 32  Temperature + relative humidity     (alternate: GPIO 4)
+ *   DHT11 DATA      GPIO 4   Temperature + relative humidity
  *   Onboard LED     GPIO 2   Heartbeat / fault indicator
  *
  *   The firmware is non-blocking (no delay in the control loop), exposes a CORS-enabled
@@ -29,6 +30,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include <ArduinoOTA.h>
+#include <Update.h>
 #include <DHT.h>
 #include <math.h>
 
@@ -48,9 +51,10 @@ const char* WIFI_PASSWORD = "SAujian1234";
 #define FALLBACK_AP_SSID        "BroccoliCabin_AP"
 #define FALLBACK_AP_PASSWORD    "biosphere123"
 #define MDNS_HOSTNAME           "biosphere"
+#define OTA_PASSWORD            "biosphere123"
 
 // --- Sensors -------------------------------------------------------------------------
-#define PIN_DHT11                32   // DHT11 DATA (alternate: 4)
+#define PIN_DHT11                4    // DHT11 DATA
 #define PIN_SOIL1                34   // Capacitive soil 1 AOUT (ADC1, input-only)
 #define PIN_SOIL2                35   // Capacitive soil 2 AOUT (ADC1, input-only)
 #define DHTTYPE                  DHT11
@@ -69,16 +73,17 @@ const char* WIFI_PASSWORD = "SAujian1234";
 
 // 4-channel relay board
 #define PIN_RELAY_PELTIER        25   // IN1
-#define PIN_RELAY_SPARE          26   // IN2
-#define PIN_RELAY_FAN            27   // IN3
+#define PIN_RELAY_FAN            27   // IN2
+#define PIN_RELAY_SPARE          26   // IN3 (under the buck converter)
 #define PIN_RELAY_GROWLIGHT      14   // IN4
 
-// 2-channel relay board
-#define PIN_RELAY_LED_STRIP      13   // IN1 (alternate: 12)
-#define PIN_RELAY_PUMP1          18   // IN2 (alternate: 19)
+// 2-channel "ujung" relay board
+// IN2 is the Fan Out relay and is Y-spliced to the same GPIO 27 as 4-CH IN2.
+#define PIN_RELAY_LED_STRIP      32   // IN1 (alternate: 12)
 
-// 1-channel relay board
-#define PIN_RELAY_PUMP2          16   // IN  (alternate: 17)
+// 2-channel "tengah" relay board
+#define PIN_RELAY_PUMP1          19   // IN2
+#define PIN_RELAY_PUMP2          18   // IN1 (alternate: 17)
 
 // Status indicator (onboard blue LED on most ESP32 Dev Modules)
 #define PIN_STATUS_LED           2
@@ -168,6 +173,12 @@ struct SystemState {
   PumpRuntime pump2Run = {false, 0, 0};
   uint32_t pump1OnSince = 0;
   uint32_t pump2OnSince = 0;
+
+  // OTA update state
+  bool otaInProgress = false;
+  bool otaUploadOk = false;
+  bool otaRebootPending = false;
+  uint32_t otaRebootAt = 0;
 
   // Emergency flush
   bool flushActive = false;
@@ -586,6 +597,7 @@ void updatePumpAutomation(uint8_t pump, float soil, bool soilValid, PumpRuntime&
 }
 
 void executeAutomatedClimateControl() {
+  if (state.otaInProgress) return;
   if (!state.autoMode) return;
   if (state.dhtFault) return;
 
@@ -741,6 +753,110 @@ void handleNotFound() {
   server.send(404, "application/json", "{\"error\":\"not found\"}");
 }
 
+// =========================================================================================
+// 9. OTA FIRMWARE UPDATE
+// =========================================================================================
+
+void otaCutOutputs() {
+  applyPeltier(false);
+  applyFan(false);
+  applyGrowLight(false);
+  applyLedStrip(false);
+  applySpare(false);
+  stopAllPumps();
+}
+
+void handleOTAForm() {
+  String page;
+  page.reserve(2200);
+  page += F("<!DOCTYPE html><html lang='id'><head><meta charset='UTF-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>OTA Update - Biosphere Cabin</title>"
+            "<style>body{font-family:system-ui,sans-serif;background:#f8fafc;color:#0f172a;"
+            "max-width:560px;margin:40px auto;padding:24px}h1{font-size:1.3rem}"
+            ".card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;"
+            "box-shadow:0 8px 24px rgba(15,23,42,.06)}input{width:100%;padding:12px;"
+            "border:1px solid #cbd5e1;border-radius:10px;margin:12px 0}"
+            "button{background:#059669;color:#fff;border:0;border-radius:10px;padding:12px 18px;"
+            "font-weight:700;font-size:1rem;cursor:pointer}a{color:#0284c7}"
+            ".warn{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;"
+            "font-size:.86rem;color:#92400e}</style></head><body><div class='card'>"
+            "<h1>⬆ OTA Firmware Update</h1>"
+            "<p>Choose the <b>.bin</b> file exported from Arduino IDE<br>"
+            "(Sketch → Export Compiled Binary).</p>"
+            "<p class='warn'>Use an OTA-capable partition scheme. Do not power off during upload.</p>"
+            "<form method='POST' action='/update' enctype='multipart/form-data'>"
+            "<input type='file' name='firmware' accept='.bin,application/octet-stream' required>"
+            "<button type='submit'>Upload Firmware</button></form>"
+            "<p style='margin-top:18px'><a href='/'>← Back to dashboard</a></p>"
+            "</div></body></html>");
+  server.send(200, "text/html; charset=utf-8", page);
+}
+
+void handleOTAUpload() {
+  HTTPUpload& upload = server.upload();
+
+  if (upload.status == UPLOAD_FILE_START) {
+    state.otaInProgress = true;
+    state.otaUploadOk = false;
+    state.otaRebootPending = false;
+    otaCutOutputs();
+    addSystemLog("OTA update started; outputs forced OFF");
+    Serial.printf("[OTA] Receiving: %s\n", upload.filename.c_str());
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+      Update.printError(Serial);
+    }
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (state.otaInProgress && Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+      Update.printError(Serial);
+    }
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (state.otaInProgress && Update.end(true)) {
+      state.otaUploadOk = true;
+      addSystemLog("OTA upload complete; rebooting");
+      Serial.printf("[OTA] Success: %u bytes\n", (unsigned)upload.totalSize);
+    } else {
+      Update.printError(Serial);
+      state.otaInProgress = false;
+      addSystemLog("OTA update failed");
+    }
+  } else if (upload.status == UPLOAD_FILE_ABORTED) {
+    Update.abort();
+    state.otaInProgress = false;
+    state.otaUploadOk = false;
+    addSystemLog("OTA upload aborted");
+  }
+}
+
+void handleOTAUpdate() {
+  bool ok = state.otaUploadOk && !Update.hasError();
+
+  server.sendHeader("Connection", "close");
+  String page;
+  page.reserve(900);
+  if (ok) {
+    page += F("<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+              "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+              "<title>OTA Success</title></head><body style='font-family:system-ui;"
+              "max-width:520px;margin:40px auto;padding:24px;background:#f8fafc;color:#0f172a'>"
+              "<div style='background:#ecfdf5;border:1px solid #a7f3d0;border-radius:16px;padding:22px'>"
+              "<h1>✅ Update successful</h1><p>The cabin is rebooting with the new firmware.</p>"
+              "<p>Reconnect in about 10 seconds.</p></div></body></html>");
+    state.otaRebootPending = true;
+    state.otaRebootAt = millis() + 1500UL;
+  } else {
+    page += F("<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+              "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+              "<title>OTA Failed</title></head><body style='font-family:system-ui;"
+              "max-width:520px;margin:40px auto;padding:24px;background:#f8fafc;color:#0f172a'>"
+              "<div style='background:#fff1f2;border:1px solid #fecdd3;border-radius:16px;padding:22px'>"
+              "<h1>❌ Update failed</h1><p>Check the partition scheme and the .bin file, then retry.</p>"
+              "<p><a href='/update'>Back to OTA</a></p></div></body></html>");
+    state.otaInProgress = false;
+  }
+  server.send(200, "text/html; charset=utf-8", page);
+}
+
 String currentIpString() {
   if (WiFi.status() == WL_CONNECTED) return WiFi.localIP().toString();
   return WiFi.softAPIP().toString();
@@ -841,6 +957,10 @@ void handleTelemetryApi() {
   json += "\"statusLed\":" + String(PIN_STATUS_LED);
   json += "},";
 
+  json += "\"ota\":{";
+  json += "\"web\":true,\"arduino\":true,\"hostname\":\"" + String(MDNS_HOSTNAME) + "\"";
+  json += "},";
+
   json += "\"logs\":[";
   for (uint8_t i = 0; i < logCount; i++) {
     uint8_t idx = (logHead + LOG_CAPACITY - logCount + i) % LOG_CAPACITY;
@@ -858,6 +978,11 @@ void handleControlApi() {
   handleCORS();
   if (server.method() == HTTP_OPTIONS) {
     server.send(204);
+    return;
+  }
+
+  if (state.otaInProgress) {
+    server.send(503, "application/json", "{\"error\":\"OTA update in progress\"}");
     return;
   }
 
@@ -1010,8 +1135,8 @@ void setup() {
   Serial.println();
   Serial.println("============================================================");
   Serial.println("  SMART BIOSPHERE CABIN - ESP32 STARTUP");
-  Serial.println("  Peltier 25 | Spare 26 | Fan 27 | Grow 14");
-  Serial.println("  LED 13 | Pump1 18 | Pump2 16 | Soil 34/35 | DHT11 32");
+  Serial.println("  Peltier 25 | Fan 27 (x2 relays) | Spare 26 | Grow 14");
+  Serial.println("  LED 32 | Pump1 19 | Pump2 18 | Soil 34/35 | DHT11 4");
   Serial.println("============================================================");
 
   // Relay outputs: force OFF before OUTPUT to avoid boot chatter.
@@ -1075,6 +1200,27 @@ void setup() {
     Serial.printf("[mDNS] http://%s.local/\n", MDNS_HOSTNAME);
   }
 
+  // ---- OTA (Arduino IDE network port + web upload) -------------------------------
+  ArduinoOTA.setHostname(MDNS_HOSTNAME);
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+  ArduinoOTA.onStart([]() {
+    state.otaInProgress = true;
+    otaCutOutputs();
+    addSystemLog("ArduinoOTA update started; outputs forced OFF");
+  });
+  ArduinoOTA.onEnd([]() {
+    addSystemLog("ArduinoOTA update complete; rebooting");
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    state.otaInProgress = false;
+    Serial.printf("[OTA] ArduinoOTA error %u\n", (unsigned)error);
+    addSystemLog("ArduinoOTA update error");
+  });
+  ArduinoOTA.begin();
+  Serial.printf("[OTA] ArduinoOTA ready: %s.local (password: %s)\n",
+                MDNS_HOSTNAME, OTA_PASSWORD);
+  Serial.println("[OTA] Web updater: http://<ip>/update");
+
   // ---- HTTP routes ---------------------------------------------------------------
   server.on("/", HTTP_GET, handleRoot);
   server.on("/", HTTP_OPTIONS, handleOptions);
@@ -1083,6 +1229,8 @@ void setup() {
   server.on("/api/telemetry", HTTP_GET, handleTelemetryApi);
   server.on("/api/telemetry", HTTP_OPTIONS, handleOptions);
   server.on("/api/control", HTTP_ANY, handleControlApi);
+  server.on("/update", HTTP_GET, handleOTAForm);
+  server.on("/update", HTTP_POST, handleOTAUpdate, handleOTAUpload);
   server.onNotFound(handleNotFound);
   server.begin();
 
@@ -1097,6 +1245,12 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  ArduinoOTA.handle();
+
+  if (state.otaRebootPending && millis() >= state.otaRebootAt) {
+    Serial.println("[OTA] Rebooting into new firmware...");
+    ESP.restart();
+  }
 
   uint32_t now = millis();
 

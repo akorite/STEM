@@ -10,13 +10,13 @@ This tree merges the original [`akorite/STEM`](https://github.com/akorite/STEM) 
 
 | Function | Relay board input | ESP32 pin | Wire colour | Notes |
 |---|---|---|---|---|
-| Peltier 12 V | 4-CH **IN1** | **GPIO 25** | Hitam | Cooling element |
-| Spare actuator | 4-CH **IN2** | **GPIO 26** | Putih | Free / future use |
-| Fan (outside + inside, parallel) | 4-CH **IN3** | **GPIO 27** | Abu-abu | Interlocked with Peltier |
-| HPL grow light | 4-CH **IN4** | **GPIO 14** | Ungu | 16 h / 8 h photoperiod in phase 2 |
-| LED strip / room light | 2-CH **IN1** | **GPIO 13** | Cokelat | Alternate: GPIO 12 |
-| DC pump 1 / zone A | 2-CH **IN2** | **GPIO 18** | Putih / abu | Alternate: GPIO 19 |
-| DC pump 2 / zone B | 1-CH **IN** | **GPIO 16** | Ungu / biru | Alternate: GPIO 17 |
+| Peltier 12 V | 4-CH **IN1** | **GPIO 25** | Cokelat / hitam | Cooling element |
+| Fan In + Fan Out | 4-CH **IN2** + 2-CH “ujung” **IN2** | **GPIO 27** | Abu-abu (Y-splice) | Both relay inputs share GPIO 27 |
+| Spare actuator | 4-CH **IN3** | **GPIO 26** | Abu-abu / putih | Under the buck converter |
+| HPL grow light (2x top) | 4-CH **IN4** | **GPIO 14** | Ungu | 16 h / 8 h photoperiod in phase 2 |
+| LED strip / bottom light | 2-CH “ujung” **IN1** | **GPIO 32** | Putih / cokelat | Alternate: GPIO 12 |
+| DC pump 1 / zone A (left) | 2-CH “tengah” **IN2** | **GPIO 19** | Ungu / biru | — |
+| DC pump 2 / zone B (right) | 2-CH “tengah” **IN1** | **GPIO 18** | Putih / abu-abu | Alternate: GPIO 17 |
 
 ### Sensors
 
@@ -24,21 +24,21 @@ This tree merges the original [`akorite/STEM`](https://github.com/akorite/STEM) 
 |---|---|---|---|---|
 | Soil moisture 1 (capacitive V2.0) | AOUT | **GPIO 34** | Kuning | ADC1, input-only |
 | Soil moisture 2 (capacitive V2.0) | AOUT | **GPIO 35** | Kuning | ADC1, input-only |
-| DHT11 | DATA | **GPIO 32** | Hijau / oranye | Alternate: GPIO 4 |
+| DHT11 | DATA | **GPIO 4** | Hijau / oranye | — |
 | Status LED | — | **GPIO 2** | — | Onboard LED on most DevKit boards |
 
-The firmware uses the **safer pin from each “A / B” pair** in the wiring table:
+Pin-selection notes:
 
-- GPIO 13 instead of 12 (GPIO 12 is a boot-strapping pin; a relay pulling it low can block boot).
-- GPIO 18 instead of 19 (both are fine; 18 avoids the USB D− pin).
-- GPIO 16 instead of 17 (both are fine).
-- GPIO 32 instead of 4 (GPIO 4 is also a boot-strapping pin).
+- **Fan:** GPIO 27 drives both fan relay inputs in parallel. If the two optocoupler inputs together draw more than about 12 mA, buffer GPIO 27 with a transistor instead of driving them directly.
+- **LED strip:** GPIO 32 is used instead of GPIO 12, because GPIO 12 is a boot-strapping pin and a relay pulling it low can block boot.
+- **Pump 2:** GPIO 18 is used instead of 17; both work, but 18 matches the table’s primary pin.
+- **DHT11:** GPIO 4 has a pull-up on the DHT data line, so it is safe as a boot-strapping pin.
 
-If your harness is already crimped for the alternate pin, change the matching `#define` at the top of `BroccoliBiosphereCabin.ino`. All pin choices are reported live in `/api/telemetry` under `pins`.
+If your harness is already crimped for an alternate pin, change the matching `#define` at the top of `BroccoliBiosphereCabin.ino`. All pin choices are reported live in `/api/telemetry` under `pins`.
 
 ### Relay polarity
 
-The firmware assumes **active-LOW** relay boards (`IN = LOW` turns the relay on), which is the common blue 4-CH/2-CH/1-CH module. If your board is active-HIGH, set:
+The firmware assumes **active-LOW** relay boards (`IN = LOW` turns the relay on), which is the common blue relay module. If your board is active-HIGH, set:
 
 ```cpp
 #define RELAY_ACTIVE_LOW 0
@@ -57,6 +57,7 @@ Power each relay board from its rated coil voltage (usually **5 V**, from the ES
 - **Wi-Fi fallback** — if the configured router is unavailable, the board starts `BroccoliCabin_AP` (password `biosphere123`) at `http://192.168.4.1/`.
 - **mDNS** — on a normal LAN the console is also available at `http://biosphere.local/`.
 - **Embedded dashboard** — the ESP32 serves the standalone waifu console at `/` and `/dashboard`, so no laptop is needed for a demo. The API is at `/api/telemetry` and `/api/control`.
+- **OTA updates** — browser upload at `/update` and Arduino IDE network-port upload as `biosphere`; outputs are forced off during an update.
 
 Set your Wi-Fi credentials at the top of `BroccoliBiosphereCabin.ino`:
 
@@ -107,6 +108,31 @@ npm run embed
 
 `npm run check:embed` fails if `dashboard_html.h` is out of date.
 
+## OTA firmware update
+
+OTA needs an OTA-capable partition table. In Arduino IDE:
+
+**Tools → Partition Scheme → “Minimal SPIFFS (1.9MB APP with OTA/128KB SPIFFS)”**
+(or “No FS 4MB (2MB APP x2)” if your core version offers it)
+
+Do not use the plain “Default 4MB with spiffs” scheme — it has only one app slot, so OTA uploads will fail.
+
+### Web updater
+
+1. Open `http://<esp32-ip>/update` (or `http://biosphere.local/update`).
+2. Select the `.bin` file from **Sketch → Export Compiled Binary**.
+3. Upload. All relays are forced OFF while the update runs, then the board reboots.
+
+The OTA link appears in the console footer when the dashboard is connected to real hardware. The web updater has no login — use it only on a trusted local network.
+
+### Arduino IDE network upload
+
+1. The board advertises itself as **`biosphere`**.
+2. In Arduino IDE, select **Tools → Port → Network ports → biosphere at <ip>**.
+3. Upload. The OTA password is `biosphere123` (change `OTA_PASSWORD` in the sketch).
+
+If the board is in fallback AP mode, connect your PC to `BroccoliCabin_AP` and use `http://192.168.4.1/update`; Arduino IDE network-port discovery may not work over the AP.
+
 ## REST API
 
 ### `GET /api/telemetry`
@@ -115,10 +141,10 @@ Key fields:
 
 ```json
 {
-  "temp": 20.4, "rh": 57.6,
+  "temp": 19.0, "rh": 64.0,
   "soil1": 56.4, "soil2": 48.2, "soil": 52.3,
-  "adc1": 2240, "adc2": 2600,
-  "vpd": 0.62, "pcs": 97.4,
+  "adc1": 2187, "adc2": 2335,
+  "vpd": 0.79, "pcs": 88.8,
   "status": "OPTIMAL", "autoMode": true, "phase": 2, "day": 5,
   "relays": {
     "peltier": false, "fan": false, "spare": false,
@@ -133,10 +159,11 @@ Key fields:
     "dry2": 3200, "wet2": 1400
   },
   "pins": {
-    "dht": 32, "soil1": 34, "soil2": 35,
+    "dht": 4, "soil1": 34, "soil2": 35,
     "peltier": 25, "spare": 26, "fan": 27, "growLight": 14,
-    "ledStrip": 13, "pump1": 18, "pump2": 16, "statusLed": 2
-  }
+    "ledStrip": 32, "pump1": 19, "pump2": 18, "statusLed": 2
+  },
+  "ota": { "web": true, "arduino": true, "hostname": "biosphere" }
 }
 ```
 
@@ -173,7 +200,7 @@ curl -X POST "http://192.168.1.50/api/control?action=toggleRelay&ch=6"
 
 ## Notes and troubleshooting
 
-- **DHT11 reads NaN** — check the data wire on GPIO 32, 3.3 V supply, and a 10 kΩ pull-up to 3.3 V if the module does not already include one. The firmware needs three consecutive good frames after an error to leave safe mode.
+- **DHT11 reads NaN** — check the data wire on GPIO 4, 3.3 V supply, and a 10 kΩ pull-up to 3.3 V if the module does not already include one. The firmware needs three consecutive good frames after an error to leave safe mode.
 - **Relay clicks at boot** — many ESP32 pins float low before `setup()`. The sketch preloads every relay OFF before setting `pinMode`, but a brief hardware click can still happen on some boards. Use a relay board that already has input pull-ups, or add a 10 kΩ pull-up from each IN pin to the relay board's own logic voltage (check whether it is 3.3 V or 5 V).
 - **Pumps do not run in auto** — check that the matching soil channel is not flagged as a fault and the measured moisture is below `soilMin`. Automatic pulses have a 60 s cooldown.
 - **Only one dashboard is needed** — the ESP32 serves `dashboard.html` directly. `server.js` is only for local development without hardware and serves both consoles.

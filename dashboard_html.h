@@ -109,6 +109,10 @@ section{margin-bottom:26px;scroll-margin-top:110px}
 @keyframes floatz{0%{opacity:0;transform:translate(0,0) scale(.6)}50%{opacity:1}100%{opacity:0;transform:translate(14px,-22px) scale(1.2)}}
 @keyframes mtalk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.35)}}
 .waifu-svg svg{animation:idle 3s ease-in-out infinite;transform-origin:bottom center}
+.capy-pal{position:absolute;right:-6px;bottom:-4px;display:flex;flex-direction:column;align-items:center;gap:1px;z-index:4;pointer-events:none}
+.capy-pal svg{width:62px;height:62px;animation:capy-bob 3.2s ease-in-out infinite;filter:drop-shadow(0 3px 5px rgba(124,79,51,.18))}
+.capy-pal span{font-size:.62rem;font-weight:800;color:#7C4F33;background:#F5E6D3;border:1px solid #E2C9A8;border-radius:99px;padding:1px 7px}
+@keyframes capy-bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-3px) rotate(1deg)}}
 .bounce svg{animation:hop .45s cubic-bezier(.16,1,.3,1)!important}
 .talking .mouth-happy,.talking .mouth-pant,.talking .mouth-sad,.talking .mouth-shiver{transform-origin:100px 116px;animation:mtalk .18s linear infinite}
 .morph-sprout{display:none}.morph-microgreen{display:block}.morph-harvest{display:none}
@@ -249,6 +253,9 @@ section{margin-bottom:26px;scroll-margin-top:110px}
 .ttime{color:var(--sky-deep);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:.72rem;white-space:nowrap}
 .tmsg{font-weight:600}
 footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margin-top:10px}
+.ota-link{display:none;align-items:center;gap:4px;margin-left:8px;padding:3px 9px;border-radius:var(--pill);
+  background:var(--matcha-soft);color:var(--matcha-deep);border:1px solid #A7F3D0;text-decoration:none;font-weight:800}
+.ota-link:hover{background:#A7F3D0}
 @media(max-width:640px){.topbar{position:relative;top:0;padding:12px 14px;border-radius:20px}section{scroll-margin-top:16px}}
 </style>
 </head>
@@ -386,6 +393,27 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
             <path id="hitArms" class="hit" d="M 30,130 L 78,130 L 78,175 L 30,175 Z M 122,130 L 170,130 L 170,175 L 122,175 Z" onclick="handleZoneTap('arms')"/>
             <path id="hitStem" class="hit" d="M 78,130 L 122,130 L 122,205 L 78,205 Z" onclick="handleZoneTap('stem')"/>
           </svg>
+          <div class="capy-pal" title="Capy the cabin buddy" aria-label="Capybara">
+            <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+              <ellipse cx="32" cy="45" rx="21" ry="13" fill="#B9825A" stroke="#7C4F33" stroke-width="2"/>
+              <ellipse cx="17" cy="54" rx="6" ry="3.5" fill="#8B5E3C"/>
+              <ellipse cx="47" cy="54" rx="6" ry="3.5" fill="#8B5E3C"/>
+              <rect x="14" y="12" width="36" height="30" rx="14" fill="#C08A60" stroke="#7C4F33" stroke-width="2"/>
+              <ellipse cx="20" cy="14" rx="5" ry="4" fill="#8B5E3C"/>
+              <ellipse cx="44" cy="14" rx="5" ry="4" fill="#8B5E3C"/>
+              <ellipse cx="32" cy="34" rx="12" ry="7" fill="#E8C9A8"/>
+              <ellipse cx="32" cy="31" rx="4" ry="3" fill="#4A2F22"/>
+              <circle cx="24" cy="25" r="2.2" fill="#2B1C14"/>
+              <circle cx="40" cy="25" r="2.2" fill="#2B1C14"/>
+              <circle cx="24.7" cy="24.2" r="0.7" fill="#fff"/>
+              <circle cx="40.7" cy="24.2" r="0.7" fill="#fff"/>
+              <circle cx="19" cy="31" r="3" fill="#F3A6A6" opacity=".7"/>
+              <circle cx="45" cy="31" r="3" fill="#F3A6A6" opacity=".7"/>
+              <path d="M32 34 v3 M32 37 q-3 2 -5 0 M32 37 q3 2 5 0" fill="none" stroke="#4A2F22" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M33 12 q-2 -7 4 -9 q2 6 -1 9" fill="#34D399" stroke="#059669" stroke-width="1.5"/>
+            </svg>
+            <span>Capy</span>
+          </div>
         </div>
         <div class="actions">
           <button class="btn-n n-water" onclick="nurtureBrocco('water')">🌸 Siram 5 Detik</button>
@@ -438,7 +466,7 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
       <div class="card scard" style="border-color:#E9D5FF"><div class="card-head"><span class="card-label">✨ VPD</span><span class="t-small">Aman: 0.40–0.80 kPa</span></div><div class="big"><span id="valVpd">-.--</span><span class="unit">kPa</span></div><div id="badgeVpd" class="badge badge-optimal">…</div><div class="rtrack"><div class="rsafe" style="left:20%;width:20%"></div><div id="pinVpd" class="rpin" style="left:31%"></div></div></div>
     </div>
     <div class="diag-grid">
-      <div class="diag"><h4><span>🌡️ DHT11 Suhu &amp; RH</span><span class="gpio">GPIO 32</span></h4>
+      <div class="diag"><h4><span>🌡️ DHT11 Suhu &amp; RH</span><span class="gpio">GPIO 4</span></h4>
         <div class="drow"><span>VPsat jenuh:</span><span class="v" id="diagVpSat">-- kPa</span></div>
         <div class="drow"><span>VPact aktual:</span><span class="v" id="diagVpAct">-- kPa</span></div>
         <div class="drow"><span>Polling:</span><span class="v">2500 ms</span></div>
@@ -473,12 +501,12 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
       <div class="card-head"><div><span class="card-label">Matriks Relay &amp; Aktuator</span><div style="font-size:.74rem;color:var(--sub)">Ketuk untuk override langsung — otomatis pindah ke MANUAL</div></div><span class="badge badge-sky">ACTIVE-LOW 12V</span></div>
       <div class="matrix">
         <div id="nodePeltier" class="node"><span class="gpio">4CH IN1 • GPIO 25</span><div class="led"></div><div class="nm">Peltier 12V</div><div id="stPeltier" class="vl">OFF</div><button id="btnRelay1" class="tgl" onclick="toggleHardwareRelay(1)">Nyalakan</button><div id="badgeInterlockFan" class="lock">🔒 Fan Auto-ON</div></div>
-        <div id="nodeFan" class="node"><span class="gpio">4CH IN3 • GPIO 27</span><div class="led"></div><div class="nm">Fan Gabungan</div><div id="stFan" class="vl">OFF</div><button id="btnRelay2" class="tgl" onclick="toggleHardwareRelay(2)">Nyalakan</button><div id="badgeInterlockPeltier" class="lock">🔒 Proteksi Peltier</div></div>
-        <div id="nodeSpare" class="node"><span class="gpio">4CH IN2 • GPIO 26</span><div class="led"></div><div class="nm">Spare Relay</div><div id="stSpare" class="vl">OFF</div><button id="btnRelay3" class="tgl" onclick="toggleHardwareRelay(3)">Nyalakan</button></div>
+        <div id="nodeFan" class="node"><span class="gpio" style="white-space:normal;text-align:center;line-height:1.15">4CH IN2 + 2CH IN2<br>GPIO 27</span><div class="led"></div><div class="nm">Fan Gabungan</div><div id="stFan" class="vl">OFF</div><button id="btnRelay2" class="tgl" onclick="toggleHardwareRelay(2)">Nyalakan</button><div id="badgeInterlockPeltier" class="lock">🔒 Proteksi Peltier</div></div>
+        <div id="nodeSpare" class="node"><span class="gpio">4CH IN3 • GPIO 26</span><div class="led"></div><div class="nm">Spare Relay</div><div id="stSpare" class="vl">OFF</div><button id="btnRelay3" class="tgl" onclick="toggleHardwareRelay(3)">Nyalakan</button></div>
         <div id="nodeLight" class="node"><span class="gpio">4CH IN4 • GPIO 14</span><div class="led"></div><div class="nm">HPL Grow Light</div><div id="stLight" class="vl">OFF</div><button id="btnRelay4" class="tgl" onclick="toggleHardwareRelay(4)">Nyalakan</button></div>
-        <div id="nodeLed" class="node"><span class="gpio">2CH IN1 • GPIO 13</span><div class="led"></div><div class="nm">LED Strip</div><div id="stLed" class="vl">OFF</div><button id="btnRelay5" class="tgl" onclick="toggleHardwareRelay(5)">Nyalakan</button></div>
-        <div id="nodePump1" class="node"><span class="gpio">2CH IN2 • GPIO 18</span><div class="led"></div><div class="nm">DC Pump 1 • A</div><div id="stPump1" class="vl">OFF</div><button id="btnRelay6" class="tgl" onclick="toggleHardwareRelay(6)">Nyalakan</button></div>
-        <div id="nodePump2" class="node"><span class="gpio">1CH IN • GPIO 16</span><div class="led"></div><div class="nm">DC Pump 2 • B</div><div id="stPump2" class="vl">OFF</div><button id="btnRelay7" class="tgl" onclick="toggleHardwareRelay(7)">Nyalakan</button></div>
+        <div id="nodeLed" class="node"><span class="gpio">2CH IN1 • GPIO 32</span><div class="led"></div><div class="nm">LED Strip</div><div id="stLed" class="vl">OFF</div><button id="btnRelay5" class="tgl" onclick="toggleHardwareRelay(5)">Nyalakan</button></div>
+        <div id="nodePump1" class="node"><span class="gpio">2CH IN2 • GPIO 19</span><div class="led"></div><div class="nm">DC Pump 1 • A</div><div id="stPump1" class="vl">OFF</div><button id="btnRelay6" class="tgl" onclick="toggleHardwareRelay(6)">Nyalakan</button></div>
+        <div id="nodePump2" class="node"><span class="gpio">2CH IN1 • GPIO 18</span><div class="led"></div><div class="nm">DC Pump 2 • B</div><div id="stPump2" class="vl">OFF</div><button id="btnRelay7" class="tgl" onclick="toggleHardwareRelay(7)">Nyalakan</button></div>
       </div>
       <div class="tanks">
         <div class="tank"><div class="tank-h"><span>💧 Tangki 1 • Zona A / Pump 1</span><span id="valTank1Text" style="color:var(--sky-deep)">-- mL</span></div><div class="tbar"><div id="tank1Bar" class="tfill" style="background:#38BDF8;transform:scaleX(1)"></div></div><button class="btn" style="width:100%;font-size:.75rem" onclick="sendControl('action=refill&tank=1')">Reset Estimasi Tangki 1</button></div>
@@ -522,7 +550,7 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
     </div>
   </section>
 
-  <footer>Made with 💖 for Brocco-chan • ESP32 Biosphere Cabin • <span id="footUptime">--</span></footer>
+  <footer>Made with 💖 for Brocco-chan • ESP32 Biosphere Cabin • <span id="footUptime">--</span><a id="otaLink" class="ota-link" href="/update" title="Upload new firmware">⬆ OTA Update</a></footer>
 </div>
 
 <script>
@@ -561,7 +589,7 @@ if(d.day<=3){m.classList.add('stage-sprout');stage.innerText='Tahap 1: Baby Broc
 else if(d.day<=7){m.classList.add('stage-microgreen');stage.innerText='Tahap 2: Waifu Pastel Brocco-chan 🌸💖'}
 else{m.classList.add('stage-harvest');stage.innerText='Tahap 3: Harvest Queen Brocco-chan! 👑✨'}
 m.classList.remove('mood-happy','mood-cold','mood-heat','mood-heat-crit','mood-thirsty','mood-sleep');
-if(d.status==='SAFEMODE'){m.classList.add('mood-panic');badge.className='badge badge-safe';badge.innerText='PANIK';tip.innerText='Periksa kabel sensor DHT11 GPIO 32! Safe mode aktif.';setBroccoSpeech('Waduh sensor bermasalah! Safe mode darurat!')}
+if(d.status==='SAFEMODE'){m.classList.add('mood-panic');badge.className='badge badge-safe';badge.innerText='PANIK';tip.innerText='Periksa kabel sensor DHT11 GPIO 4! Safe mode aktif.';setBroccoSpeech('Waduh sensor bermasalah! Safe mode darurat!')}
 else if(d.soil1Fault||d.soil2Fault){m.classList.add('mood-panic');badge.className='badge badge-waspada';badge.innerText='SENSOR TANAH';tip.innerText='Salah satu probe tanah tidak terbaca. Pompa zona tersebut dimatikan sampai sensor pulih.';setBroccoSpeech('Sensor tanah ada yang tidak terbaca, aku hati-hati dulu ya!')}
 else if(!d.relays.growLight){m.classList.add('mood-sleep');badge.className='badge badge-optimal';badge.innerText=d.phase===1?'TIDUR NYENYAK':'TIDUR MALAM';tip.innerText=d.phase===1?'Fase blackout hari 1–3: biarkan gelap agar kecambah memanjang cantik.':'Siklus gelap 8 jam penting untuk respirasi brokoli.';setBroccoSpeech(d.phase===1?'Zzz... fase gelap, aku bobo dulu ya...':'Zzz... malam fotoperiode, istirahat dulu...')}
 else if(d.temp>24){m.classList.add('mood-heat-crit');badge.className='badge badge-kritis';badge.innerText='OVERHEAT';tip.innerText='Bahaya! Suhu >24°C memicu busuk akar Pythium! Nyalakan Peltier.';setBroccoSpeech('Aduh kepanasan! Dinginkan aku cepat!')}
@@ -595,6 +623,7 @@ for(let i=0;i<n;i++){const x=X+i/(n-1)*W;tp.push(`${x.toFixed(1)},${(Y+H-Math.mi
 document.getElementById('tempPolyline').setAttribute('points',tp.join(' '));document.getElementById('rhPolyline').setAttribute('points',rp.join(' '))}
 function renderDashboard(d){lastTelemetry=d;
 document.getElementById('valIp').innerText=d.ip||'ESP32';document.getElementById('valUptime').innerText=d.uptime||'00:00:00';document.getElementById('footUptime').innerText='uptime '+(d.uptime||'--');
+const otaLink=document.getElementById('otaLink');if(otaLink)otaLink.style.display=(d.ota&&d.ota.web)?'inline-flex':'none';
 const sb=document.getElementById('badgeStatus'),st=document.getElementById('badgeStatusText');
 sb.className='badge '+(d.status==='OPTIMAL'?'badge-optimal':d.status==='WASPADA'?'badge-waspada':d.status==='SAFEMODE'?'badge-safe':'badge-kritis');
 st.innerText=d.status==='OPTIMAL'?'KONDISI PRIMA':d.status;

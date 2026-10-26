@@ -48,6 +48,7 @@
     dayDisplay: document.getElementById('dayDisplay'),
     targetHostInput: document.getElementById('targetHostInput'),
     btnConnectTarget: document.getElementById('btnConnectTarget'),
+    btnOta: document.getElementById('btnOta'),
     ipDisplay: document.getElementById('ipDisplay'),
     uptimeDisplay: document.getElementById('uptimeDisplay'),
 
@@ -218,6 +219,9 @@
     el.dayDisplay.textContent = `DAY ${dayPad} / 10`;
     el.ipDisplay.textContent = d.ip || '127.0.0.1:8080';
     el.uptimeDisplay.textContent = d.uptime || '00:00:00';
+    if (el.btnOta) {
+      el.btnOta.style.display = (d.ota && d.ota.web) ? 'inline-block' : 'none';
+    }
 
     // 2. Atmospheric Thermodynamics Station
     // Air Temperature
@@ -670,6 +674,12 @@
   el.targetHostInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') el.btnConnectTarget.click();
   });
+
+  if (el.btnOta) {
+    el.btnOta.addEventListener('click', () => {
+      window.open(`${apiBase}/update`, '_blank', 'noopener');
+    });
+  }
 
   // Regulation Mode
   el.btnAutoMode.addEventListener('click', () => {
