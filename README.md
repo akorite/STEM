@@ -44,7 +44,7 @@ The firmware assumes **active-LOW** relay boards (`IN = LOW` turns the relay on)
 #define RELAY_ACTIVE_LOW 0
 ```
 
-Power the relay coils and pumps/Peltier from a suitable external 12 V supply, and connect the ESP32 GND to the relay board GND. Do not power the 12 V loads from the ESP32 5 V/VIN pin.
+Power each relay board from its rated coil voltage (usually **5 V**, from the ESP32 `5V`/`VIN` pin or a 5 V buck), and power the pumps/Peltier from a separate **12 V** supply. Connect all grounds together (ESP32 GND, relay board GND, 12 V supply GND). Never feed 12 V into the relay board's 5 V VCC pin, and do not run the 12 V loads from the ESP32 5 V/VIN pin.
 
 ## Firmware behaviour
 
