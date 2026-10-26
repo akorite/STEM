@@ -245,6 +245,7 @@ section{margin-bottom:26px;scroll-margin-top:110px}
 .ttime{color:var(--sky-deep);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:.72rem;white-space:nowrap}
 .tmsg{font-weight:600}
 footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margin-top:10px}
+@media(max-width:640px){.topbar{position:relative;top:0;padding:12px 14px;border-radius:20px}section{scroll-margin-top:16px}}
 </style>
 </head>
 <body>
@@ -383,10 +384,10 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
           </svg>
         </div>
         <div class="actions">
-          <button class="btn-n n-water" onclick="nurtureBrocco('water')">🌸 Beri Minum</button>
-          <button class="btn-n n-vit" onclick="nurtureBrocco('nutrient')">✨ Beri Vitamin</button>
-          <button class="btn-n n-breeze" onclick="nurtureBrocco('breeze')">🍃 Kipas Semilir</button>
-          <button class="btn-n n-light" onclick="nurtureBrocco('light')">☀️ Atur Lampu</button>
+          <button class="btn-n n-water" onclick="nurtureBrocco('water')">🌸 Siram 5 Detik</button>
+          <button class="btn-n n-vit" onclick="nurtureBrocco('nutrient')">✨ Siram Zona B</button>
+          <button class="btn-n n-breeze" onclick="nurtureBrocco('breeze')">🍃 Kipas</button>
+          <button class="btn-n n-light" onclick="nurtureBrocco('light')">☀️ Grow Light</button>
           <button id="btnSoundToggle" class="btn-s" onclick="toggleAudio()">🎵 Musik: Nyala</button>
           <button id="btnVoiceToggle" class="btn-s" onclick="toggleWaifuVoice()">🗣️ Suara Brocco-chan: Nyala</button>
         </div>
@@ -403,10 +404,10 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
 
       <div class="side">
         <div class="care-grid">
-          <div class="care"><div class="care-h"><span>💧 Hidrasi</span><span id="careValWater" style="color:var(--sky-deep)">--%</span></div><div class="track"><div id="careFillWater" class="fill f-water" style="transform:scaleX(0)"></div></div></div>
-          <div class="care"><div class="care-h"><span>☀️ Cahaya</span><span id="careValLight" style="color:var(--butter-deep)">--</span></div><div class="track"><div id="careFillLight" class="fill f-energy" style="transform:scaleX(0)"></div></div></div>
-          <div class="care"><div class="care-h"><span>🧪 Vitamin</span><span id="careValNutrient" style="color:var(--lav-deep)">--%</span></div><div class="track"><div id="careFillNutrient" class="fill f-nut" style="transform:scaleX(0)"></div></div></div>
-          <div class="care"><div class="care-h"><span>🌸 Bahagia</span><span id="careValHappy" style="color:var(--pink-deep)">--%</span></div><div class="track"><div id="careFillHappy" class="fill f-happy" style="transform:scaleX(0)"></div></div></div>
+          <div class="care"><div class="care-h"><span>💧 Zona A • Pump 1</span><span id="careValWater" style="color:var(--sky-deep)">--%</span></div><div class="track"><div id="careFillWater" class="fill f-water" style="transform:scaleX(0)"></div></div></div>
+          <div class="care"><div class="care-h"><span>☀️ Grow Light</span><span id="careValLight" style="color:var(--butter-deep)">--</span></div><div class="track"><div id="careFillLight" class="fill f-energy" style="transform:scaleX(0)"></div></div></div>
+          <div class="care"><div class="care-h"><span>🧪 Zona B • Pump 2</span><span id="careValNutrient" style="color:var(--lav-deep)">--%</span></div><div class="track"><div id="careFillNutrient" class="fill f-nut" style="transform:scaleX(0)"></div></div></div>
+          <div class="care"><div class="care-h"><span>🌸 Comfort</span><span id="careValHappy" style="color:var(--pink-deep)">--%</span></div><div class="track"><div id="careFillHappy" class="fill f-happy" style="transform:scaleX(0)"></div></div></div>
         </div>
         <div class="card">
           <div class="card-head"><span class="card-label">💖 Plant Comfort Score</span><span id="pcsBadge" class="badge badge-optimal">--%</span></div>
@@ -429,26 +430,33 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
     <div class="tele-grid">
       <div class="card scard" style="border-color:#FECDD3"><div class="card-head"><span class="card-label">🌡️ Suhu Udara</span><span id="lblSafeTemp" class="t-small">Aman: 18.0–22.0°C</span></div><div class="big"><span id="valTemp">--.-</span><span class="unit">°C</span></div><div id="badgeTemp" class="badge badge-optimal">…</div><div class="rtrack"><div id="zoneSafeTemp" class="rsafe" style="left:32%;width:16%"></div><div id="pinTemp" class="rpin" style="left:41%"></div></div></div>
       <div class="card scard" style="border-color:#BAE6FD"><div class="card-head"><span class="card-label">💧 Kelembapan Udara</span><span id="lblSafeRh" class="t-small">Aman: 50.0–65.0%</span></div><div class="big"><span id="valRh">--.-</span><span class="unit">% RH</span></div><div id="badgeRh" class="badge badge-optimal">…</div><div class="rtrack"><div id="zoneSafeRh" class="rsafe" style="left:50%;width:15%"></div><div id="pinRh" class="rpin" style="left:58%"></div></div></div>
-      <div class="card scard" style="border-color:#A7F3D0"><div class="card-head"><span class="card-label">🌱 Media Tanam</span><span id="lblSafeSoil" class="t-small">Aman: 45.0–70.0%</span></div><div class="big"><span id="valSoil">--.-</span><span class="unit">%</span></div><div id="badgeSoil" class="badge badge-optimal">…</div><div class="rtrack"><div id="zoneSafeSoil" class="rsafe" style="left:45%;width:25%"></div><div id="pinSoil" class="rpin" style="left:56%"></div></div></div>
+      <div class="card scard" style="border-color:#A7F3D0"><div class="card-head"><span class="card-label">🌱 Media Tanam (rata-rata)</span><span id="lblSafeSoil" class="t-small">Aman: 45.0–70.0%</span></div><div class="big"><span id="valSoil">--.-</span><span class="unit">%</span></div><div id="badgeSoil" class="badge badge-optimal">…</div><div class="drow" style="margin-top:6px"><span>Zona A • GPIO 34</span><span class="v" id="valSoil1">--%</span></div><div class="drow"><span>Zona B • GPIO 35</span><span class="v" id="valSoil2">--%</span></div><div class="rtrack"><div id="zoneSafeSoil" class="rsafe" style="left:45%;width:25%"></div><div id="pinSoil" class="rpin" style="left:56%"></div></div></div>
       <div class="card scard" style="border-color:#E9D5FF"><div class="card-head"><span class="card-label">✨ VPD</span><span class="t-small">Aman: 0.40–0.80 kPa</span></div><div class="big"><span id="valVpd">-.--</span><span class="unit">kPa</span></div><div id="badgeVpd" class="badge badge-optimal">…</div><div class="rtrack"><div class="rsafe" style="left:20%;width:20%"></div><div id="pinVpd" class="rpin" style="left:31%"></div></div></div>
     </div>
     <div class="diag-grid">
-      <div class="diag"><h4><span>🌡️ DHT22 Suhu &amp; RH</span><span class="gpio">GPIO 14</span></h4>
+      <div class="diag"><h4><span>🌡️ DHT11 Suhu &amp; RH</span><span class="gpio">GPIO 32</span></h4>
         <div class="drow"><span>VPsat jenuh:</span><span class="v" id="diagVpSat">-- kPa</span></div>
         <div class="drow"><span>VPact aktual:</span><span class="v" id="diagVpAct">-- kPa</span></div>
-        <div class="drow"><span>Polling:</span><span class="v">2000 ms</span></div>
+        <div class="drow"><span>Polling:</span><span class="v">2500 ms</span></div>
         <div class="drow"><span>Sinyal:</span><span class="v" id="diagDhtStatus" style="color:var(--matcha-deep)">…</span></div>
       </div>
-      <div class="diag"><h4><span>🌱 Soil ADC</span><span class="gpio">GPIO 34</span></h4>
-        <div class="drow"><span>Raw ADC 12-bit:</span><span class="v" id="diagRawSoil">-- / 4095</span></div>
-        <div class="drow"><span>Tegangan:</span><span class="v" id="diagVoltSoil">-- V</span></div>
-        <div class="drow"><span>Kering ↔ Basah:</span><span class="v" id="diagCalibRange">3200 ↔ 1400</span></div>
-        <div style="display:flex;gap:6px;margin-top:8px"><button class="btn" style="flex:1;padding:6px;font-size:.72rem" onclick="calibrateSoilPoint('dry')">Set Kering</button><button class="btn" style="flex:1;padding:6px;font-size:.72rem" onclick="calibrateSoilPoint('wet')">Set Basah</button></div>
+      <div class="diag"><h4><span>🌱 Soil ADC 1 &amp; 2</span><span class="gpio">GPIO 34 / 35</span></h4>
+        <div class="drow"><span>Raw ADC 1 (Zona A):</span><span class="v" id="diagRawSoil1">-- / 4095</span></div>
+        <div class="drow"><span>Raw ADC 2 (Zona B):</span><span class="v" id="diagRawSoil2">-- / 4095</span></div>
+        <div class="drow"><span>Tegangan 1 / 2:</span><span class="v" id="diagVoltSoil">-- / -- V</span></div>
+        <div class="drow"><span>Kalibrasi 1:</span><span class="v" id="diagCalibRange1">3200 ↔ 1400</span></div>
+        <div class="drow"><span>Kalibrasi 2:</span><span class="v" id="diagCalibRange2">3200 ↔ 1400</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+          <button class="btn" style="padding:6px;font-size:.72rem" onclick="calibrateSoilPoint(1,'dry')">S1 Kering</button>
+          <button class="btn" style="padding:6px;font-size:.72rem" onclick="calibrateSoilPoint(1,'wet')">S1 Basah</button>
+          <button class="btn" style="padding:6px;font-size:.72rem" onclick="calibrateSoilPoint(2,'dry')">S2 Kering</button>
+          <button class="btn" style="padding:6px;font-size:.72rem" onclick="calibrateSoilPoint(2,'wet')">S2 Basah</button>
+        </div>
       </div>
-      <div class="diag"><h4><span>💓 Detak Sistem</span><span class="gpio">GPIO 27</span></h4>
+      <div class="diag"><h4><span>💓 Detak Sistem</span><span class="gpio">GPIO 2</span></h4>
         <div class="drow"><span>Kedip LED:</span><span class="v" id="diagLedBlink">1000 ms</span></div>
-        <div class="drow"><span>Interlock:</span><span class="v" style="color:var(--matcha-deep)">Aktif &amp; Aman 🔒</span></div>
-        <div class="drow"><span>Purge jamur:</span><span class="v">30 mnt / 45 dtk</span></div>
+        <div class="drow"><span>Interlock fan:</span><span class="v" style="color:var(--matcha-deep)">Aktif &amp; Aman 🔒</span></div>
+        <div class="drow"><span>Batas pompa:</span><span class="v">30 detik</span></div>
         <div class="drow"><span>Pinout:</span><span class="v" id="diagPins" style="font-size:.66rem">…</span></div>
       </div>
     </div>
@@ -460,18 +468,17 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
     <div class="card">
       <div class="card-head"><div><span class="card-label">Matriks Relay &amp; Aktuator</span><div style="font-size:.74rem;color:var(--sub)">Ketuk untuk override langsung — otomatis pindah ke MANUAL</div></div><span class="badge badge-sky">ACTIVE-LOW 12V</span></div>
       <div class="matrix">
-        <div id="nodePeltier" class="node"><span class="gpio">GPIO 19</span><div class="led"></div><div class="nm">CH1 Peltier</div><div id="stPeltier" class="vl">OFF</div><button id="btnRelay1" class="tgl" onclick="toggleHardwareRelay(1)">Nyalakan</button><div id="badgeInterlockFan" class="lock">🔒 Heatsink Auto-ON</div></div>
-        <div id="nodeFan" class="node"><span class="gpio">GPIO 18</span><div class="led"></div><div class="nm">CH2 Heatsink</div><div id="stFan" class="vl">OFF</div><button id="btnRelay2" class="tgl" onclick="toggleHardwareRelay(2)">Nyalakan</button><div id="badgeInterlockPeltier" class="lock">🔒 Proteksi</div></div>
-        <div id="nodeBlower" class="node"><span class="gpio">GPIO 5</span><div class="led"></div><div class="nm">CH3 Blower</div><div id="stBlower" class="vl">OFF</div><button id="btnRelay3" class="tgl" onclick="toggleHardwareRelay(3)">Nyalakan</button></div>
-        <div id="nodeLight" class="node"><span class="gpio">GPIO 17</span><div class="led"></div><div class="nm">CH4 Grow Light</div><div id="stLight" class="vl">OFF</div><button id="btnRelay4" class="tgl" onclick="toggleHardwareRelay(4)">Nyalakan</button></div>
-        <div id="nodeSpray1" class="node"><span class="gpio">GPIO 16</span><div class="led"></div><div class="nm">CH5 Spray T1</div><div id="stSpray1" class="vl">OFF</div><button id="btnRelay5" class="tgl" onclick="toggleHardwareRelay(5)">Nyalakan</button></div>
-        <div id="nodeSpray2" class="node"><span class="gpio">GPIO 4</span><div class="led"></div><div class="nm">CH6 Spray T2</div><div id="stSpray2" class="vl">OFF</div><button id="btnRelay6" class="tgl" onclick="toggleHardwareRelay(6)">Nyalakan</button></div>
-        <div id="nodeValve1" class="node"><span class="gpio">GPIO 25</span><div class="nm" style="margin-top:8px">Katup Servo 1</div><div id="stValve1" class="vl" style="color:var(--sky-deep)">0° (TUTUP)</div><div style="display:flex;gap:4px;margin-top:6px"><button class="tgl" style="flex:1" onclick="setServoAngle(1,0)">0°</button><button class="tgl" style="flex:1" onclick="setServoAngle(1,90)">90°</button></div></div>
-        <div id="nodeValve2" class="node"><span class="gpio">GPIO 26</span><div class="nm" style="margin-top:8px">Katup Servo 2</div><div id="stValve2" class="vl" style="color:var(--matcha-deep)">0° (TUTUP)</div><div style="display:flex;gap:4px;margin-top:6px"><button class="tgl" style="flex:1" onclick="setServoAngle(2,0)">0°</button><button class="tgl" style="flex:1" onclick="setServoAngle(2,90)">90°</button></div></div>
+        <div id="nodePeltier" class="node"><span class="gpio">4CH IN1 • GPIO 25</span><div class="led"></div><div class="nm">Peltier 12V</div><div id="stPeltier" class="vl">OFF</div><button id="btnRelay1" class="tgl" onclick="toggleHardwareRelay(1)">Nyalakan</button><div id="badgeInterlockFan" class="lock">🔒 Fan Auto-ON</div></div>
+        <div id="nodeFan" class="node"><span class="gpio">4CH IN3 • GPIO 27</span><div class="led"></div><div class="nm">Fan Gabungan</div><div id="stFan" class="vl">OFF</div><button id="btnRelay2" class="tgl" onclick="toggleHardwareRelay(2)">Nyalakan</button><div id="badgeInterlockPeltier" class="lock">🔒 Proteksi Peltier</div></div>
+        <div id="nodeSpare" class="node"><span class="gpio">4CH IN2 • GPIO 26</span><div class="led"></div><div class="nm">Spare Relay</div><div id="stSpare" class="vl">OFF</div><button id="btnRelay3" class="tgl" onclick="toggleHardwareRelay(3)">Nyalakan</button></div>
+        <div id="nodeLight" class="node"><span class="gpio">4CH IN4 • GPIO 14</span><div class="led"></div><div class="nm">HPL Grow Light</div><div id="stLight" class="vl">OFF</div><button id="btnRelay4" class="tgl" onclick="toggleHardwareRelay(4)">Nyalakan</button></div>
+        <div id="nodeLed" class="node"><span class="gpio">2CH IN1 • GPIO 13</span><div class="led"></div><div class="nm">LED Strip</div><div id="stLed" class="vl">OFF</div><button id="btnRelay5" class="tgl" onclick="toggleHardwareRelay(5)">Nyalakan</button></div>
+        <div id="nodePump1" class="node"><span class="gpio">2CH IN2 • GPIO 18</span><div class="led"></div><div class="nm">DC Pump 1 • A</div><div id="stPump1" class="vl">OFF</div><button id="btnRelay6" class="tgl" onclick="toggleHardwareRelay(6)">Nyalakan</button></div>
+        <div id="nodePump2" class="node"><span class="gpio">1CH IN • GPIO 16</span><div class="led"></div><div class="nm">DC Pump 2 • B</div><div id="stPump2" class="vl">OFF</div><button id="btnRelay7" class="tgl" onclick="toggleHardwareRelay(7)">Nyalakan</button></div>
       </div>
       <div class="tanks">
-        <div class="tank"><div class="tank-h"><span>🍼 Tangki 1 • Air Baku</span><span id="valTank1Text" style="color:var(--sky-deep)">-- mL</span></div><div class="tbar"><div id="tank1Bar" class="tfill" style="background:#38BDF8;transform:scaleX(1)"></div></div><button class="btn" style="width:100%;font-size:.75rem" onclick="sendControl('action=refill&tank=1')">Isi Ulang Tangki 1</button></div>
-        <div class="tank"><div class="tank-h"><span>🧪 Tangki 2 • Nutrisi</span><span id="valTank2Text" style="color:var(--lav-deep)">-- mL</span></div><div class="tbar"><div id="tank2Bar" class="tfill" style="background:#C084FC;transform:scaleX(1)"></div></div><button class="btn" style="width:100%;font-size:.75rem" onclick="sendControl('action=refill&tank=2')">Isi Ulang Tangki 2</button></div>
+        <div class="tank"><div class="tank-h"><span>💧 Tangki 1 • Zona A / Pump 1</span><span id="valTank1Text" style="color:var(--sky-deep)">-- mL</span></div><div class="tbar"><div id="tank1Bar" class="tfill" style="background:#38BDF8;transform:scaleX(1)"></div></div><button class="btn" style="width:100%;font-size:.75rem" onclick="sendControl('action=refill&tank=1')">Reset Estimasi Tangki 1</button></div>
+        <div class="tank"><div class="tank-h"><span>💧 Tangki 2 • Zona B / Pump 2</span><span id="valTank2Text" style="color:var(--lav-deep)">-- mL</span></div><div class="tbar"><div id="tank2Bar" class="tfill" style="background:#C084FC;transform:scaleX(1)"></div></div><button class="btn" style="width:100%;font-size:.75rem" onclick="sendControl('action=refill&tank=2')">Reset Estimasi Tangki 2</button></div>
       </div>
       <div class="sliders">
         <div><div class="sl-h"><span>🌡️ Target Suhu</span><span id="valSliderTemp">18.0 - 22.0 °C</span></div><input type="range" min="15" max="28" step="0.5" value="20" oninput="adjustThresholdSetpoint('temp',this.value)"></div>
@@ -480,12 +487,12 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
       </div>
     </div>
     <div class="card" style="margin-top:16px">
-      <div class="card-head"><span class="card-label">🌱 Siklus Tumbuh</span><span id="lblTank" class="badge badge-muted">Tangki 1</span></div>
+      <div class="card-head"><span class="card-label">🌱 Siklus Tumbuh</span><span id="lblTank" class="badge badge-muted">Zona A + B • Otomatis</span></div>
       <div class="ctl-rows">
         <div class="trow"><div><div class="tt">Mode Kontrol</div><div class="ts">Otomatis iklim vs manual override</div></div><button id="btnModeToggle" class="btn btn-mint" onclick="toggleMode()">MODE MANUAL</button></div>
         <div class="trow"><div><div class="tt">Fase Tumbuh</div><div class="ts">Perkecambahan vs autotrofik</div></div><div style="display:flex;gap:6px"><button class="btn" onclick="sendControl('action=phase&val=1')">🌙 Semai</button><button class="btn" onclick="sendControl('action=phase&val=2')">☀️ Terang</button></div></div>
         <div class="trow"><div><div class="tt">Hari Budidaya (1–10)</div><div class="ts">Sinkron otomatis dengan fase</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn" onclick="adjustDay(-1)">−1</button><b id="lblDayCount">Hari 1</b><button class="btn" onclick="adjustDay(1)">+1</button></div></div>
-        <div class="trow"><div><div class="tt" style="color:var(--pink-deep)">⚡ Siram Darurat</div><div class="ts">Semprot 5 detik Tangki 1</div></div><button class="btn btn-red" onclick="sendControl('action=flush')">Siram Darurat</button></div>
+        <div class="trow"><div><div class="tt" style="color:var(--pink-deep)">⚡ Siram Darurat</div><div class="ts">Kedua pompa menyala 5 detik</div></div><button class="btn btn-red" onclick="sendControl('action=flush')">Siram Darurat</button></div>
       </div>
     </div>
   </section>
@@ -537,32 +544,33 @@ else if(zone==='cheeks'){playChirp('feed_vitamin');setBroccoSpeech('Kyaa~ pipiku
 else if(zone==='arms'){playChirp('pet_giggle');setBroccoSpeech('Tos! Aku Brocco-chan, waifu brokoli pastelmu! Semangat tumbuh! 🌿✨',true)}
 else{playChirp('hop');setBroccoSpeech('Hup! Dress pastel-ku berkibar! Lompat ceria! 🎀',true)}}
 function nurtureBrocco(a){initAudio();
-if(a==='water'){playChirp('feed_water');setBroccoSpeech('Aah, segaar! Semprotan air baku aktif! 💧✨',true);sendControl('action=flush')}
-else if(a==='nutrient'){playChirp('feed_vitamin');setBroccoSpeech('Yummy! Booster vitamin mikro diserap! 🌸✨',true);sendControl('action=toggleRelay&ch=6')}
-else if(a==='breeze'){playChirp('breeze_fan');setBroccoSpeech('Wussshh! Hembusan angin sepoi-sepoi bikin sejuk! 🍃',true);sendControl('action=toggleRelay&ch=3')}
-else{playChirp('feed_vitamin');setBroccoSpeech('Cahaya LED Grow Light disesuaikan! ☀️',true);sendControl('action=toggleRelay&ch=4')}}
+if(a==='water'){playChirp('feed_water');setBroccoSpeech('Aah, segaar! Kedua pompa menyiram 5 detik! 💧✨',true);sendControl('action=flush')}
+else if(a==='nutrient'){playChirp('feed_vitamin');setBroccoSpeech('Zona B dapat minum dari Pump 2! 🌸✨',true);sendControl('action=pulsePump&pump=2&seconds=5')}
+else if(a==='breeze'){playChirp('breeze_fan');setBroccoSpeech('Wussshh! Fan kabin dinyalakan! 🍃',true);sendControl('action=toggleRelay&ch=2')}
+else{playChirp('feed_vitamin');setBroccoSpeech('HPL Grow Light disesuaikan! ☀️',true);sendControl('action=toggleRelay&ch=4')}}
 function waifuRepeat(){initAudio();const i=document.getElementById('waifuInput');const t=(i.value||'').trim();if(!t){setBroccoSpeech('Ketik dulu dong, nanti aku tirukan dengan suara imut! 🎀',true);return}playChirp('pet_giggle');setBroccoSpeech(t+' ~nyaa! 🌸',true);i.value=''}
 function waifuReport(){initAudio();const d=lastTelemetry;if(!d){setBroccoSpeech('Tunggu sebentar ya, aku lagi mengambil data dari server... ✨',true);return}
-setBroccoSpeech(`Hai! Aku Brocco-chan! Suhu ${d.temp.toFixed(1)} derajat, kelembapan ${d.rh.toFixed(1)} persen, tanah ${d.soil.toFixed(1)} persen, VPD ${d.vpd.toFixed(2)}, skor nyaman ${Math.round(d.pcs)} persen. Tangki satu ${Math.round(d.tank1Vol)} mili, tangki dua ${Math.round(d.tank2Vol)} mili. Status ${d.status}. Hari ke ${d.day}, fase ${d.phase}. 🌸📊`,true)}
+setBroccoSpeech(`Hai! Aku Brocco-chan! Suhu ${d.temp.toFixed(1)} derajat, kelembapan ${d.rh.toFixed(1)} persen, tanah zona A ${(d.soil1??d.soil).toFixed(1)} persen, zona B ${(d.soil2??d.soil).toFixed(1)} persen, VPD ${d.vpd.toFixed(2)}, skor nyaman ${Math.round(d.pcs)} persen. Status ${d.status}. Hari ke ${d.day}, fase ${d.phase}. 🌸📊`,true)}
 function updateBroccoMood(d){const m=document.getElementById('broccoMascot'),badge=document.getElementById('broccoMoodBadge'),stage=document.getElementById('broccoStageBadge'),tip=document.getElementById('compAgronomiTip');
 if(!m)return;m.classList.remove('stage-sprout','stage-microgreen','stage-harvest');
 if(d.day<=3){m.classList.add('stage-sprout');stage.innerText='Tahap 1: Baby Brocco-chan 🌱🎀'}
 else if(d.day<=7){m.classList.add('stage-microgreen');stage.innerText='Tahap 2: Waifu Pastel Brocco-chan 🌸💖'}
 else{m.classList.add('stage-harvest');stage.innerText='Tahap 3: Harvest Queen Brocco-chan! 👑✨'}
 m.classList.remove('mood-happy','mood-cold','mood-heat','mood-heat-crit','mood-thirsty','mood-sleep');
-if(d.status==='SAFEMODE'){m.classList.add('mood-panic');badge.className='badge badge-safe';badge.innerText='PANIK';tip.innerText='Periksa kabel sensor DHT22 GPIO 14! Safe mode aktif.';setBroccoSpeech('Waduh sensor bermasalah! Safe mode darurat!')}
-else if(!d.relays.light){m.classList.add('mood-sleep');badge.className='badge badge-optimal';badge.innerText=d.phase===1?'TIDUR NYENYAK':'TIDUR MALAM';tip.innerText=d.phase===1?'Fase blackout hari 1–3: biarkan gelap agar kecambah memanjang cantik.':'Siklus gelap 8 jam penting untuk respirasi brokoli.';setBroccoSpeech(d.phase===1?'Zzz... fase gelap, aku bobo dulu ya...':'Zzz... malam fotoperiode, istirahat dulu...')}
+if(d.status==='SAFEMODE'){m.classList.add('mood-panic');badge.className='badge badge-safe';badge.innerText='PANIK';tip.innerText='Periksa kabel sensor DHT11 GPIO 32! Safe mode aktif.';setBroccoSpeech('Waduh sensor bermasalah! Safe mode darurat!')}
+else if(d.soil1Fault||d.soil2Fault){m.classList.add('mood-panic');badge.className='badge badge-waspada';badge.innerText='SENSOR TANAH';tip.innerText='Salah satu probe tanah tidak terbaca. Pompa zona tersebut dimatikan sampai sensor pulih.';setBroccoSpeech('Sensor tanah ada yang tidak terbaca, aku hati-hati dulu ya!')}
+else if(!d.relays.growLight){m.classList.add('mood-sleep');badge.className='badge badge-optimal';badge.innerText=d.phase===1?'TIDUR NYENYAK':'TIDUR MALAM';tip.innerText=d.phase===1?'Fase blackout hari 1–3: biarkan gelap agar kecambah memanjang cantik.':'Siklus gelap 8 jam penting untuk respirasi brokoli.';setBroccoSpeech(d.phase===1?'Zzz... fase gelap, aku bobo dulu ya...':'Zzz... malam fotoperiode, istirahat dulu...')}
 else if(d.temp>24){m.classList.add('mood-heat-crit');badge.className='badge badge-kritis';badge.innerText='OVERHEAT';tip.innerText='Bahaya! Suhu >24°C memicu busuk akar Pythium! Nyalakan Peltier.';setBroccoSpeech('Aduh kepanasan! Dinginkan aku cepat!')}
-else if(d.temp>22){m.classList.add('mood-heat');badge.className='badge badge-waspada';badge.innerText='AGAK GERAH';tip.innerText='Peltier CH1 + heatsink fan aktif mendinginkan ke 18–22°C.';setBroccoSpeech('Agak gerah nih, Peltier lagi kerja!')}
+else if(d.temp>22){m.classList.add('mood-heat');badge.className='badge badge-waspada';badge.innerText='AGAK GERAH';tip.innerText='Peltier + fan gabungan aktif mendinginkan ke 18–22°C.';setBroccoSpeech('Agak gerah nih, Peltier lagi kerja!')}
 else if(d.temp<18){m.classList.add('mood-cold');badge.className='badge badge-waspada';badge.innerText='MENGGIGIL';tip.innerText='Suhu <18°C memperlambat fotosintesis microgreens.';setBroccoSpeech('Brrr dingin! Aku menggigil!')}
-else if(d.soil<45){m.classList.add('mood-thirsty');badge.className='badge badge-waspada';badge.innerText='HAUS SEKALI';tip.innerText='Semprot Tangki 1 untuk menaikkan media ke 45–70%.';setBroccoSpeech('Tanahku kering! Minta minum dong! 💧')}
+else if(d.soil<45){m.classList.add('mood-thirsty');badge.className='badge badge-waspada';badge.innerText='HAUS SEKALI';tip.innerText='Pompa zona yang kering akan menyiram otomatis (pulse 8 detik).';setBroccoSpeech('Tanahku kering! Minta minum dong! 💧')}
 else{m.classList.add('mood-happy');badge.className='badge badge-optimal';badge.innerText='SANGAT PRIMA';tip.innerText='Homeostasis sempurna. Pertahankan 18–22°C & RH 50–65%.';setBroccoSpeech('Prima! Sejuk dan aku tumbuh cepat! 🌸✨')}
 const cw=document.getElementById('careValWater'),fw=document.getElementById('careFillWater');
-if(cw){cw.innerText=Math.round(d.soil)+'% '+(d.soil>=45&&d.soil<=70?'(Pas)':d.soil<45?'(Haus)':'(Basah)');fw.style.transform=`scaleX(${Math.min(1,Math.max(0,d.soil/100))})`}
+if(cw){const s=d.soil1??d.soil;cw.innerText=Math.round(s)+'% '+(s>=45&&s<=70?'(Pas)':s<45?'(Haus)':'(Basah)');fw.style.transform=`scaleX(${Math.min(1,Math.max(0,s/100))})`}
 const cl=document.getElementById('careValLight'),fl=document.getElementById('careFillLight');
-if(cl){cl.innerText=d.relays.light?'16 Jam (Aktif)':'Malam (Off)';fl.style.transform=`scaleX(${d.relays.light?1:.2})`}
+if(cl){cl.innerText=d.relays.growLight?'16 Jam (Aktif)':'Malam (Off)';fl.style.transform=`scaleX(${d.relays.growLight?1:.2})`}
 const cn=document.getElementById('careValNutrient'),fn=document.getElementById('careFillNutrient');
-if(cn){const r=Math.min(1,Math.max(0,d.tank2Vol/1000));cn.innerText=Math.round(r*100)+'%';fn.style.transform=`scaleX(${r})`}
+if(cn){const s=d.soil2??d.soil;cn.innerText=Math.round(s)+'% '+(s>=45&&s<=70?'(Pas)':s<45?'(Haus)':'(Basah)');fn.style.transform=`scaleX(${Math.min(1,Math.max(0,s/100))})`}
 const ch=document.getElementById('careValHappy'),fh=document.getElementById('careFillHappy');
 if(ch){const r=Math.min(1,Math.max(0,d.pcs/100));ch.innerText=Math.round(d.pcs)+'% '+(d.pcs>=85?'(Prima)':'(Waspada)');fh.style.transform=`scaleX(${r})`}
 const pt=document.getElementById('pinTemp');if(pt)pt.style.left=Math.min(100,Math.max(0,(d.temp-10)/25*100))+'%';
@@ -571,12 +579,11 @@ const ps=document.getElementById('pinSoil');if(ps)ps.style.left=Math.min(100,Mat
 const pv=document.getElementById('pinVpd');if(pv)pv.style.left=Math.min(100,Math.max(0,d.vpd/2*100))+'%'}
 async function fetchTelemetry(){try{const r=await fetch('/api/telemetry');if(!r.ok)return;renderDashboard(await r.json())}catch(e){console.warn(e)}}
 async function toggleHardwareRelay(ch){initAudio();playChirp('pet_giggle');await sendControl('action=toggleRelay&ch='+ch)}
-async function setServoAngle(s,a){initAudio();playChirp('pet_giggle');await sendControl('action=setServo&servo='+s+'&angle='+a)}
 async function adjustThresholdSetpoint(t,v){v=parseFloat(v);
 if(t==='temp'){const a=(v-2).toFixed(1),b=(v+2).toFixed(1);document.getElementById('valSliderTemp').innerText=`${a} - ${b} °C`;document.getElementById('lblSafeTemp').innerText=`Aman: ${a}–${b}°C`;document.getElementById('zoneSafeTemp').style.left=Math.max(0,(a-10)/25*100)+'%';document.getElementById('zoneSafeTemp').style.width=Math.max(5,(b-a)/25*100)+'%';await sendControl(`action=setThreshold&param=tempMin&val=${a}`);await sendControl(`action=setThreshold&param=tempMax&val=${b}`)}
 else if(t==='rh'){const a=(v-7.5).toFixed(1),b=(+v+7.5).toFixed(1);document.getElementById('valSliderRh').innerText=`${a} - ${b} %`;document.getElementById('lblSafeRh').innerText=`Aman: ${a}–${b}%`;document.getElementById('zoneSafeRh').style.left=a+'%';document.getElementById('zoneSafeRh').style.width=(b-a)+'%';await sendControl(`action=setThreshold&param=rhMin&val=${a}`);await sendControl(`action=setThreshold&param=rhMax&val=${b}`)}
 else{const a=(v-12.5).toFixed(1),b=(+v+12.5).toFixed(1);document.getElementById('valSliderSoil').innerText=`${a} - ${b} %`;document.getElementById('lblSafeSoil').innerText=`Aman: ${a}–${b}%`;document.getElementById('zoneSafeSoil').style.left=a+'%';document.getElementById('zoneSafeSoil').style.width=(b-a)+'%';await sendControl(`action=setThreshold&param=soilMin&val=${a}`);await sendControl(`action=setThreshold&param=soilMax&val=${b}`)}}
-async function calibrateSoilPoint(t){if(confirm(`Set titik ${t.toUpperCase()} ke ADC saat ini?`))await sendControl('action=calibrateSoil&type='+t)}
+async function calibrateSoilPoint(sensor,t){if(confirm(`Set sensor tanah ${sensor} titik ${t.toUpperCase()} ke ADC saat ini?`))await sendControl('action=calibrateSoil&sensor='+sensor+'&type='+t)}
 function updateBadge(id,ok,crit,a,b,c){const e=document.getElementById(id);if(ok){e.className='badge badge-optimal';e.innerText=a}else if(crit){e.className='badge badge-kritis';e.innerText=c}else{e.className='badge badge-waspada';e.innerText=b}}
 function setNode(id,tx,on,fan){const e=document.getElementById(id),t=document.getElementById(tx);if(on){e.className='node '+(fan?'on-fan':'on');t.innerText='ON'}else{e.className='node';t.innerText='OFF'}}
 function renderSvgHistory(ts,rs){const W=740,H=110,X=40,Y=20,n=Math.max(ts.length,rs.length);if(n<2)return;let tp=[],rp=[];
@@ -588,7 +595,7 @@ const sb=document.getElementById('badgeStatus'),st=document.getElementById('badg
 sb.className='badge '+(d.status==='OPTIMAL'?'badge-optimal':d.status==='WASPADA'?'badge-waspada':d.status==='SAFEMODE'?'badge-safe':'badge-kritis');
 st.innerText=d.status==='OPTIMAL'?'KONDISI PRIMA':d.status;
 document.getElementById('valTemp').innerText=d.temp.toFixed(1);document.getElementById('valRh').innerText=d.rh.toFixed(1);
-document.getElementById('valSoil').innerText=d.soil.toFixed(1);document.getElementById('valVpd').innerText=d.vpd.toFixed(2);
+document.getElementById('valSoil').innerText=d.soil.toFixed(1);document.getElementById('valSoil1').innerText=(d.soil1??d.soil).toFixed(1);document.getElementById('valSoil2').innerText=(d.soil2??d.soil).toFixed(1);document.getElementById('valVpd').innerText=d.vpd.toFixed(2);
 updateBadge('badgeTemp',d.temp>=18&&d.temp<=22,d.temp>24,'🌸 NYAMAN SEKALI','AGAK HANGAT','OVERHEAT');
 updateBadge('badgeRh',d.rh>=50&&d.rh<=65,d.rh>75,'💧 SEGAR OPTIMAL','WASPADA','PEKAT');
 updateBadge('badgeSoil',d.soil>=45&&d.soil<=70,d.soil<35,'🌱 LEMBAP PAS','WASPADA','KERING');
@@ -597,33 +604,32 @@ const pcs=Math.round(d.pcs);document.getElementById('valPcs').innerText=pcs;
 const pb=document.getElementById('pcsBadge');pb.innerText=pcs+'% '+(pcs>=85?'PRIMA':pcs>=60?'SEDANG':'RENDAH');pb.className='badge '+(pcs>=85?'badge-optimal':pcs>=60?'badge-waspada':'badge-kritis');
 document.getElementById('pcsArc').style.strokeDashoffset=(226.2*(1-Math.min(1,Math.max(0,d.pcs/100)))).toFixed(1);
 document.getElementById('pcsNote').innerText=`Suhu ${d.temp.toFixed(1)}°C • RH ${d.rh.toFixed(1)}% • VPD ${d.vpd.toFixed(2)} kPa`;
-document.getElementById('valTank1Text').innerText=Math.round(d.tank1Vol)+' mL';document.getElementById('valTank2Text').innerText=Math.round(d.tank2Vol)+' mL';
-document.getElementById('tank1Bar').style.transform=`scaleX(${Math.min(1,Math.max(0,d.tank1Vol/1000))})`;
-document.getElementById('tank2Bar').style.transform=`scaleX(${Math.min(1,Math.max(0,d.tank2Vol/1000))})`;
+document.getElementById('valTank1Text').innerText=Math.round(d.tank1Vol||0)+' mL';document.getElementById('valTank2Text').innerText=Math.round(d.tank2Vol||0)+' mL';
+document.getElementById('tank1Bar').style.transform=`scaleX(${Math.min(1,Math.max(0,(d.tank1Vol||0)/1000))})`;
+document.getElementById('tank2Bar').style.transform=`scaleX(${Math.min(1,Math.max(0,(d.tank2Vol||0)/1000))})`;
 currentDay=d.day;document.getElementById('lblDayCount').innerText='Hari '+d.day;
-document.getElementById('lblTank').innerText='Tangki '+(d.activeTank||1)+(d.phase===1?' • Semai':' • Terang');
+document.getElementById('lblTank').innerText='Zona A + B • '+(d.phase===1?'Semai':'Terang');
 setNode('nodePeltier','stPeltier',d.relays.peltier);setNode('nodeFan','stFan',d.relays.fan,true);
-setNode('nodeBlower','stBlower',d.relays.blower);setNode('nodeLight','stLight',d.relays.light);
-setNode('nodeSpray1','stSpray1',d.relays.spray1);setNode('nodeSpray2','stSpray2',d.relays.spray2);
-[['btnRelay1',d.relays.peltier],['btnRelay2',d.relays.fan],['btnRelay3',d.relays.blower],['btnRelay4',d.relays.light],['btnRelay5',d.relays.spray1],['btnRelay6',d.relays.spray2]].forEach(([id,on])=>{const b=document.getElementById(id);if(b){b.innerText=on?'Matikan':'Nyalakan';b.className='tgl '+(on?'on':'')}});
+setNode('nodeSpare','stSpare',d.relays.spare);setNode('nodeLight','stLight',d.relays.growLight);
+setNode('nodeLed','stLed',d.relays.ledStrip);setNode('nodePump1','stPump1',d.relays.pump1);setNode('nodePump2','stPump2',d.relays.pump2);
+[['btnRelay1',d.relays.peltier],['btnRelay2',d.relays.fan],['btnRelay3',d.relays.spare],['btnRelay4',d.relays.growLight],['btnRelay5',d.relays.ledStrip],['btnRelay6',d.relays.pump1],['btnRelay7',d.relays.pump2]].forEach(([id,on])=>{const b=document.getElementById(id);if(b){b.innerText=on?'Matikan':'Nyalakan';b.className='tgl '+(on?'on':'')}});
 document.getElementById('badgeInterlockFan').style.display=d.relays.peltier?'block':'none';
 document.getElementById('badgeInterlockPeltier').style.display=(d.relays.peltier&&d.relays.fan)?'block':'none';
-if(d.rawSoilAdc!==undefined){document.getElementById('diagRawSoil').innerText=d.rawSoilAdc+' / 4095';document.getElementById('diagVoltSoil').innerText=(d.soilVoltage||(d.rawSoilAdc*3.3/4095).toFixed(2))+' V'}
+if(d.adc1!==undefined){document.getElementById('diagRawSoil1').innerText=d.adc1+' / 4095';document.getElementById('diagVoltSoil').innerText=(d.soil1Voltage??(d.adc1*3.3/4095).toFixed(2))+' / '+(d.soil2Voltage??'--')+' V'}
+if(d.adc2!==undefined){document.getElementById('diagRawSoil2').innerText=d.adc2+' / 4095'}
 if(d.vpSat!==undefined)document.getElementById('diagVpSat').innerText=d.vpSat.toFixed(2)+' kPa';
 if(d.vpAct!==undefined)document.getElementById('diagVpAct').innerText=d.vpAct.toFixed(2)+' kPa';
-if(d.thresholds){document.getElementById('diagCalibRange').innerText=`${d.thresholds.dryRaw??3200} ↔ ${d.thresholds.wetRaw??1400}`}
-if(d.pins){document.getElementById('diagPins').innerText=`DHT${d.pins.dht} S${d.pins.soil} P${d.pins.peltier} F${d.pins.fan} B${d.pins.blower} L${d.pins.light}`}
-if(d.status==='SAFEMODE'){document.getElementById('diagDhtStatus').innerText='CRITICAL (NaN)';document.getElementById('diagDhtStatus').style.color='var(--pink-deep)';document.getElementById('diagLedBlink').innerText='100 ms (Darurat)'}
+if(d.thresholds){document.getElementById('diagCalibRange1').innerText=`${d.thresholds.dry1??3200} ↔ ${d.thresholds.wet1??1400}`;document.getElementById('diagCalibRange2').innerText=`${d.thresholds.dry2??3200} ↔ ${d.thresholds.wet2??1400}`}
+if(d.pins){document.getElementById('diagPins').innerText=`DHT${d.pins.dht} S1:${d.pins.soil1} S2:${d.pins.soil2} P:${d.pins.peltier} F:${d.pins.fan} SP:${d.pins.spare} G:${d.pins.growLight} L:${d.pins.ledStrip} P1:${d.pins.pump1} P2:${d.pins.pump2} LED:${d.pins.statusLed}`}
+if(d.dhtFault||d.status==='SAFEMODE'){document.getElementById('diagDhtStatus').innerText='CRITICAL (NaN)';document.getElementById('diagDhtStatus').style.color='var(--pink-deep)';document.getElementById('diagLedBlink').innerText='100 ms (Darurat)'}
 else{document.getElementById('diagDhtStatus').innerText='Valid (Normal)';document.getElementById('diagDhtStatus').style.color='var(--matcha-deep)';document.getElementById('diagLedBlink').innerText='1000 ms (Normal)'}
-document.getElementById('stValve1').innerText=d.valves.v1+'° '+(d.valves.v1>0?'(BUKA)':'(TUTUP)');
-document.getElementById('stValve2').innerText=d.valves.v2+'° '+(d.valves.v2>0?'(BUKA)':'(TUTUP)');
 isAutoMode=d.autoMode;document.getElementById('lblMode').innerText=isAutoMode?'OTOMATIS':'MANUAL';
 document.getElementById('lblMode').className='badge '+(isAutoMode?'badge-optimal':'badge-waspada');
 document.getElementById('btnModeToggle').innerText=isAutoMode?'MODE MANUAL':'MODE OTOMATIS';
 if(d.history)renderSvgHistory(d.history.temp,d.history.rh);
 if(d.logs&&d.logs.length){document.getElementById('terminalLogs').innerHTML=d.logs.map(l=>`<div class="tlog"><span class="ttime">[${l.t}]</span><span class="tmsg">${l.m}</span></div>`).join('')}
 const live=document.getElementById('waifuLive');
-if(live){const r=d.relays,v=d.valves;live.innerHTML=`🌸 <b>${d.temp.toFixed(1)}°C</b> 💧 <b>${d.rh.toFixed(1)}%</b> 🌱 <b>${d.soil.toFixed(1)}%</b> ✨ VPD <b>${d.vpd.toFixed(2)}</b> 💖 PCS <b>${pcs}%</b><br>🍼 T1 <b>${Math.round(d.tank1Vol)}mL</b> 🧪 T2 <b>${Math.round(d.tank2Vol)}mL</b> • ADC <b>${d.rawSoilAdc}</b> ${d.soilVoltage}V • ${d.autoMode?'AUTO':'MANUAL'} Day <b>${d.day}</b> Ph${d.phase} ${d.status}<br>Relay P${r.peltier?'1':'0'} F${r.fan?'1':'0'} B${r.blower?'1':'0'} L${r.light?'1':'0'} S1${r.spray1?'1':'0'} S2${r.spray2?'1':'0'} • Valve ${v.v1}°/${v.v2}°`}
+if(live){const r=d.relays;live.innerHTML=`🌸 <b>${d.temp.toFixed(1)}°C</b> 💧 <b>${d.rh.toFixed(1)}%</b> 🌱 A <b>${(d.soil1??d.soil).toFixed(1)}%</b> / B <b>${(d.soil2??d.soil).toFixed(1)}%</b> ✨ VPD <b>${d.vpd.toFixed(2)}</b> 💖 PCS <b>${pcs}%</b><br>🍼 T1 <b>${Math.round(d.tank1Vol||0)}mL</b> 💧 T2 <b>${Math.round(d.tank2Vol||0)}mL</b> • ADC <b>${d.adc1??'--'}/${d.adc2??'--'}</b> • ${d.autoMode?'AUTO':'MANUAL'} Day <b>${d.day}</b> Ph${d.phase} ${d.status}<br>Relay Peltier:${r.peltier?'1':'0'} Fan:${r.fan?'1':'0'} Spare:${r.spare?'1':'0'} Grow:${r.growLight?'1':'0'} LED:${r.ledStrip?'1':'0'} Pump1:${r.pump1?'1':'0'} Pump2:${r.pump2?'1':'0'}`}
 updateBroccoMood(d)}
 async function sendControl(q){try{await fetch('/api/control?'+q,{method:'POST'});fetchTelemetry()}catch(e){console.error(e)}}
 function toggleMode(){sendControl('action=mode&val='+(isAutoMode?'manual':'auto'))}

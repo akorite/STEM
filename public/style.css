@@ -659,6 +659,26 @@ input {
   gap: 4px;
 }
 
+.soil-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--mint-soft);
+  border: 1px solid var(--mint-border);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--mint-green);
+}
+
+.soil-split b {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
 .meta-note {
   font-size: 9px;
   font-weight: 600;
@@ -1547,6 +1567,38 @@ input {
     height: auto;
     padding: 8px 12px;
     flex-wrap: wrap;
+  }
+  .system-identity {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .system-controls {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .control-switch-group {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+  .host-link-station {
+    flex: 1 1 170px;
+    min-width: 0;
+  }
+  .host-input {
+    width: 100%;
+    min-width: 0;
+  }
+  .system-clocks {
+    flex-direction: row;
+    gap: 10px;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .vpd-cell {
+    grid-column: 1 / -1;
   }
 }
 

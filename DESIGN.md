@@ -29,10 +29,10 @@
 
 ### Fresh Pastel Functional Spectrum
 - `--mint-green`: `#059669` / bg `#ecfdf5` / border `#a7f3d0` (Nominal status, active regulation, healthy growth)
-- `--sky-blue`: `#0284c7` / bg `#f0f9ff` / border `#bae6fd` (Relative humidity, Tank 1 pure water, cool mist)
-- `--honey-amber`: `#d97706` / bg `#fffbeb` / border `#fde68a` (Day progression, stomatal warnings, heat lamps)
+- `--sky-blue`: `#0284c7` / bg `#f0f9ff` / border `#bae6fd` (Relative humidity, pump 1 / zone A, cool mist)
+- `--honey-amber`: `#d97706` / bg `#fffbeb` / border `#fde68a` (Day progression, stomatal warnings, grow light)
 - `--sakura-rose`: `#e11d48` / bg `#fff1f2` / border `#fecdd3` (Critical alarms, emergency flush, pythium alert)
-- `--lilac-violet`: `#7c3aed` / bg `#f5f3ff` / border `#ddd6fe` (Tank 2 micronutrients, servo valves, VPD metric)
+- `--lilac-violet`: `#7c3aed` / bg `#f5f3ff` / border `#ddd6fe` (Pump 2 / zone B, VPD metric)
 
 ### Typography & Readability (WCAG AA Compliant)
 - `--text-heading`: `#0f172a` (Deep slate heading text for maximum clarity)
@@ -54,6 +54,6 @@
 - **Root:** `100vw × 100vh`, `max-height: 100vh` on desktop displays.
 - **Top System Bar:** Fixed `52px` height, featuring rounded pill controls and live heartbeat lamp.
 - **Workspace Grid:** 3 harmonious decks with generous 10px spacing:
-  - **Sensory Pods (Upper):** Atmospheric thermodynamics pod + Plant companion & soil pod + Fluidics vials.
+  - **Sensory Pods (Upper):** Atmospheric thermodynamics pod + Plant companion & dual soil pod + dual-zone watering reservoirs.
   - **Recorder & Setpoints (Middle):** Pastel SVG strip-chart with soft gradients + Tactile +/- setpoint steppers.
-  - **Operations & Audit (Lower):** 6-channel cute pastel switchboard with flow valves + Clean live activity log.
+  - **Operations & Audit (Lower):** 7-channel cute pastel relay switchboard + clean live activity log.

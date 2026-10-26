@@ -69,6 +69,8 @@
 
     // Biomass Readings & Cute Mascot
     valSoil: document.getElementById('valSoil'),
+    valSoil1: document.getElementById('valSoil1'),
+    valSoil2: document.getElementById('valSoil2'),
     needleSoil: document.getElementById('needleSoil'),
     subSoil: document.getElementById('subSoil'),
     tagSoil: document.getElementById('tagSoil'),
@@ -91,7 +93,6 @@
     fillTank1: document.getElementById('fillTank1'),
     valTank2: document.getElementById('valTank2'),
     fillTank2: document.getElementById('fillTank2'),
-    btnToggleTank: document.getElementById('btnToggleTank'),
 
     // Strip-Chart
     telemetrySvg: document.getElementById('telemetrySvg'),
@@ -119,8 +120,10 @@
     previewSoil: document.getElementById('previewSoil'),
     btnSyncThresholds: document.getElementById('btnSyncThresholds'),
     calibRawLabel: document.getElementById('calibRawLabel'),
-    btnCalibDry: document.getElementById('btnCalibDry'),
-    btnCalibWet: document.getElementById('btnCalibWet'),
+    btnCalib1Dry: document.getElementById('btnCalib1Dry'),
+    btnCalib1Wet: document.getElementById('btnCalib1Wet'),
+    btnCalib2Dry: document.getElementById('btnCalib2Dry'),
+    btnCalib2Wet: document.getElementById('btnCalib2Wet'),
 
     // Hardware Actuators
     btnEmergencyFlush: document.getElementById('btnEmergencyFlush'),
@@ -131,11 +134,8 @@
       4: { card: document.getElementById('relay4'), btn: document.getElementById('btnRelay4') },
       5: { card: document.getElementById('relay5'), btn: document.getElementById('btnRelay5') },
       6: { card: document.getElementById('relay6'), btn: document.getElementById('btnRelay6') },
+      7: { card: document.getElementById('relay7'), btn: document.getElementById('btnRelay7') },
     },
-    rangeValve1: document.getElementById('rangeValve1'),
-    valValve1: document.getElementById('valValve1'),
-    rangeValve2: document.getElementById('rangeValve2'),
-    valValve2: document.getElementById('valValve2'),
 
     // Audit Log
     terminalLogs: document.getElementById('terminalLogs'),
@@ -277,12 +277,18 @@
 
     // 3. Substrate & Biomass Health Station
     const soil = d.soil !== undefined ? d.soil : 55.0;
+    const soil1 = d.soil1 !== undefined ? d.soil1 : soil;
+    const soil2 = d.soil2 !== undefined ? d.soil2 : soil;
     el.valSoil.textContent = soil.toFixed(1);
+    el.valSoil1.textContent = soil1.toFixed(1);
+    el.valSoil2.textContent = soil2.toFixed(1);
     const soilPct = Math.min(100, Math.max(0, ((soil - 20.0) / (90.0 - 20.0)) * 100));
     el.needleSoil.style.left = `${soilPct}%`;
-    el.subSoil.textContent = `Capacitive: ${d.rawSoilAdc || '--'} ADC (${(d.soilVoltage || 0).toFixed(2)}V)`;
-
-    if (soil < 45.0) {
+    el.subSoil.textContent = `ADC: ${d.adc1 !== undefined ? d.adc1 : (d.rawSoilAdc || '--')} / ${d.adc2 !== undefined ? d.adc2 : '--'}`;
+    if (d.soil1Fault || d.soil2Fault) {
+      el.tagSoil.textContent = 'PROBE FAULT';
+      el.tagSoil.className = 'state-pill state-crit';
+    } else if (soil < 45.0) {
       el.tagSoil.textContent = soil < 35.0 ? 'PARCHED' : 'LOW MOISTURE';
       el.tagSoil.className = 'state-pill ' + (soil < 35.0 ? 'state-crit' : 'state-warn');
     } else if (soil > 70.0) {
@@ -308,8 +314,8 @@
     // Mascot Emotional Reaction Logic
     updateMascotEmotion(pcs, d);
 
-    // 4. Fluidics Reservoirs Station
-    el.activeTankLabel.textContent = `TANK ${d.activeTank || 1} ACTIVE`;
+    // 4. Dual-zone watering reservoirs
+    el.activeTankLabel.textContent = 'AUTO ZONES';
     const t1 = d.tank1Vol !== undefined ? d.tank1Vol : 800;
     const t2 = d.tank2Vol !== undefined ? d.tank2Vol : 800;
     el.valTank1.textContent = `${Math.round(t1)} mL`;
@@ -342,33 +348,22 @@
       }
     }
 
-    if (d.rawSoilAdc !== undefined) {
-      el.calibRawLabel.textContent = `ADC: ${d.rawSoilAdc} (${(d.soilVoltage || 0).toFixed(2)}V)`;
+    if (d.adc1 !== undefined) {
+      el.calibRawLabel.textContent = `ADC: ${d.adc1} / ${d.adc2 !== undefined ? d.adc2 : '--'}`;
     }
 
-    // 7. Hardware Relays
+    // 7. Hardware Relays (4-CH + 2-CH + 1-CH)
     if (d.relays) {
       updateRelayState(1, d.relays.peltier);
       updateRelayState(2, d.relays.fan);
-      updateRelayState(3, d.relays.blower);
-      updateRelayState(4, d.relays.light);
-      updateRelayState(5, d.relays.spray1);
-      updateRelayState(6, d.relays.spray2);
+      updateRelayState(3, d.relays.spare);
+      updateRelayState(4, d.relays.growLight);
+      updateRelayState(5, d.relays.ledStrip);
+      updateRelayState(6, d.relays.pump1);
+      updateRelayState(7, d.relays.pump2);
     }
 
-    // 8. Servos
-    if (d.valves) {
-      if (document.activeElement !== el.rangeValve1) {
-        el.rangeValve1.value = d.valves.v1;
-        el.valValve1.textContent = `${d.valves.v1}°`;
-      }
-      if (document.activeElement !== el.rangeValve2) {
-        el.rangeValve2.value = d.valves.v2;
-        el.valValve2.textContent = `${d.valves.v2}°`;
-      }
-    }
-
-    // 9. Chronological Audit Log
+    // 8. Chronological Audit Log
     if (d.logs && Array.isArray(d.logs)) {
       renderAuditEntries(d.logs);
     }
@@ -378,7 +373,7 @@
   function updateMascotEmotion(pcs, d) {
     if (!el.mascotMoodTag || mascotInteractionTimer) return;
     // Night rest if light is explicitly off
-    if (d.relays && d.relays.light === false) {
+    if (d.relays && d.relays.growLight === false) {
       el.mascotMoodTag.textContent = 'Resting 🌙';
       if (el.mascotEyeL && el.mascotEyeR) {
         el.mascotEyeL.setAttribute('ry', '0.6');
@@ -701,12 +696,6 @@
     sendControl(`action=day&val=${next}`);
   });
 
-  // Fluidics Tank Switching
-  el.btnToggleTank.addEventListener('click', () => {
-    const next = (telemetry && telemetry.activeTank === 1) ? 2 : 1;
-    sendControl(`action=tank&val=${next}`);
-  });
-
   document.querySelectorAll('.res-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const tank = e.target.dataset.tank;
@@ -719,8 +708,8 @@
     sendControl('action=flush');
   });
 
-  // 6 Power Relays
-  for (let ch = 1; ch <= 6; ch++) {
+  // 7 Power Relays
+  for (let ch = 1; ch <= 7; ch++) {
     const btn = el.relays[ch].btn;
     if (btn) {
       btn.addEventListener('click', () => {
@@ -728,21 +717,6 @@
       });
     }
   }
-
-  // Precision Servo Faders
-  el.rangeValve1.addEventListener('input', (e) => {
-    el.valValve1.textContent = `${e.target.value}°`;
-  });
-  el.rangeValve1.addEventListener('change', (e) => {
-    sendControl(`action=setServo&servo=1&angle=${e.target.value}`);
-  });
-
-  el.rangeValve2.addEventListener('input', (e) => {
-    el.valValve2.textContent = `${e.target.value}°`;
-  });
-  el.rangeValve2.addEventListener('change', (e) => {
-    sendControl(`action=setServo&servo=2&angle=${e.target.value}`);
-  });
 
   // Setpoint Synchronizer
   el.btnSyncThresholds.addEventListener('click', async () => {
@@ -766,13 +740,18 @@
     if (el.btnSyncThresholds) el.btnSyncThresholds.classList.remove('dirty');
     isSubmitting = false;
   });
-  // Sensor Calibration
-  el.btnCalibDry.addEventListener('click', () => {
-    sendControl('action=calibrateSoil&type=dry');
+  // Dual sensor calibration
+  el.btnCalib1Dry.addEventListener('click', () => {
+    sendControl('action=calibrateSoil&sensor=1&type=dry');
   });
-
-  el.btnCalibWet.addEventListener('click', () => {
-    sendControl('action=calibrateSoil&type=wet');
+  el.btnCalib1Wet.addEventListener('click', () => {
+    sendControl('action=calibrateSoil&sensor=1&type=wet');
+  });
+  el.btnCalib2Dry.addEventListener('click', () => {
+    sendControl('action=calibrateSoil&sensor=2&type=dry');
+  });
+  el.btnCalib2Wet.addEventListener('click', () => {
+    sendControl('action=calibrateSoil&sensor=2&type=wet');
   });
 
   // Clear Audit Log

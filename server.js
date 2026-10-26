@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DASHBOARD_FILE = path.join(__dirname, 'dashboard.html');
+const PORT = 8080;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -15,36 +17,35 @@ const MIME_TYPES = {
   '.txt': 'text/plain; charset=utf-8'
 };
 
+// ---------------------------------------------------------------------------
+// Simulation state (mirrors the ESP32 JSON contract)
+// ---------------------------------------------------------------------------
 let state = {
-  ip: "127.0.0.1:8080",
+  ip: `127.0.0.1:${PORT}`,
   uptimeSec: 620,
-  status: "OPTIMAL",
   autoMode: true,
   phase: 2,
   day: 5,
-  activeTank: 1,
-  temp: 20.4,
-  rh: 57.6,
-  soil: 56.4,
-  vpd: 0.62,
-  vpSat: 2.34,
-  vpAct: 1.40,
-  rawSoilAdc: 2240,
-  soilVoltage: 1.81,
-  pcs: 97.4,
+  temp: 19.0,
+  rh: 64.0,
+  soil1: 56.4,
+  soil2: 48.2,
+  vpSat: 2.20,
+  vpAct: 1.41,
+  vpd: 0.79,
+  pcs: 91.0,
+  adc1: 2240,
+  adc2: 2600,
   tank1Vol: 885.0,
   tank2Vol: 920.0,
   relays: {
     peltier: false,
     fan: false,
-    blower: false,
-    light: true,
-    spray1: false,
-    spray2: false
-  },
-  valves: {
-    v1: 0,
-    v2: 0
+    spare: false,
+    growLight: true,
+    ledStrip: true,
+    pump1: false,
+    pump2: false
   },
   thresholds: {
     tempMin: 18.0,
@@ -52,33 +53,250 @@ let state = {
     rhMin: 50.0,
     rhMax: 65.0,
     soilMin: 45.0,
-    soilMax: 70.0
+    soilMax: 70.0,
+    dry1: 3200,
+    wet1: 1400,
+    dry2: 3200,
+    wet2: 1400
   },
   pins: {
-    dht: 14,
-    soil: 34,
-    peltier: 19,
-    fan: 18,
-    blower: 5,
-    light: 17,
-    spray1: 16,
-    spray2: 4,
-    servo1: 25,
-    servo2: 26,
-    led: 27
+    dht: 32,
+    soil1: 34,
+    soil2: 35,
+    peltier: 25,
+    spare: 26,
+    fan: 27,
+    growLight: 14,
+    ledStrip: 13,
+    pump1: 18,
+    pump2: 16,
+    statusLed: 2
   },
   history: {
-    temp: [20.1, 20.2, 20.1, 20.3, 20.5, 20.4, 20.3, 20.5, 20.3, 20.2, 20.4, 20.3, 20.3, 20.4, 20.5, 20.4, 20.3, 20.4, 20.3, 20.4],
-    rh: [58.0, 58.5, 59.0, 58.8, 57.9, 58.1, 58.3, 58.0, 57.8, 58.2, 58.4, 58.1, 58.0, 57.9, 58.2, 58.0, 58.3, 58.1, 58.0, 57.6]
+    temp: [19.0, 19.1, 19.0, 19.1, 19.2, 19.1, 19.0, 19.1, 19.0, 19.0, 19.1, 19.0, 19.0, 19.1, 19.1, 19.0, 19.0, 19.0, 19.0, 19.0],
+    rh: [64.0, 64.2, 64.4, 64.3, 64.1, 64.0, 64.1, 64.0, 63.9, 64.0, 64.2, 64.1, 64.0, 64.0, 64.1, 64.0, 64.0, 64.0, 64.0, 64.0],
+    soil1: [55.0, 55.2, 55.4, 55.6, 55.8, 56.0, 56.1, 56.2, 56.2, 56.3, 56.3, 56.4, 56.4, 56.4, 56.4, 56.4, 56.4, 56.4, 56.4, 56.4],
+    soil2: [49.5, 49.4, 49.3, 49.2, 49.1, 49.0, 48.9, 48.8, 48.7, 48.6, 48.5, 48.4, 48.3, 48.2, 48.2, 48.2, 48.2, 48.2, 48.2, 48.2]
   },
   logs: [
-    { t: "00:10:15", m: "Hardware GPIO Matriks Interaktif Aktif (Port 8080)" },
-    { t: "00:09:00", m: "Telemetri Stabil: Suhu 20.4°C, RH 57.6%, VPD 0.62 kPa" },
-    { t: "00:07:30", m: "Autonomous Closed-Loop Climate Engine Initialized" },
-    { t: "00:05:42", m: "Siklus Otomatis Aktif - Plant Comfort Score 97.4%" },
-    { t: "00:00:00", m: "Inisialisasi Pengontrol Kabin Biosfer Brokoli..." }
+    { t: '00:10:15', m: 'Firmware v2 online: 7 relay channels, dual soil probes' },
+    { t: '00:09:00', m: 'Telemetry stable: 19.0 C, RH 64.0%, VPD 0.79 kPa' },
+    { t: '00:07:30', m: 'Dual-zone watering engine initialized' },
+    { t: '00:05:42', m: 'Automatic climate control active - PCS 88.8%' },
+    { t: '00:00:00', m: 'Biosphere cabin controller started' }
   ]
 };
+
+const pumpTimers = { 1: null, 2: null };
+const pumpLastStop = { 1: 0, 2: 0 };
+let lastHistoryPush = 0;
+
+function timeString() {
+  return new Date().toTimeString().split(' ')[0];
+}
+
+function log(message) {
+  state.logs.unshift({ t: timeString(), m: message });
+  if (state.logs.length > 12) state.logs.pop();
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function calcVpd(temp, rh) {
+  const vpSat = 0.61078 * Math.exp((17.27 * temp) / (temp + 237.3));
+  const vpAct = vpSat * (rh / 100.0);
+  return { vpSat, vpAct, vpd: Math.max(0, vpSat - vpAct) };
+}
+
+function calcPcs(temp, rh, vpd) {
+  let tScore = 1.0;
+  const tDev = Math.abs(temp - 20.0);
+  if (tDev <= 2.0) tScore = 1.0 - (tDev / 2.0) * 0.15;
+  else if (temp > 24.0) tScore = Math.max(0, 0.4 - (temp - 24.0) * 0.15);
+  else tScore = Math.max(0.1, 0.85 - ((tDev - 2.0) / 2.0) * 0.45);
+
+  let rhScore = 1.0;
+  const rhDev = Math.abs(rh - 57.5);
+  if (rhDev <= 7.5) rhScore = 1.0 - (rhDev / 7.5) * 0.15;
+  else rhScore = Math.max(0, 0.85 - ((rhDev - 7.5) / 20.0) * 0.70);
+
+  let vpdScore = 1.0;
+  const vpdDev = Math.abs(vpd - 0.60);
+  if (vpdDev <= 0.20) vpdScore = 1.0 - (vpdDev / 0.20) * 0.15;
+  else vpdScore = Math.max(0, 0.85 - ((vpdDev - 0.20) / 0.50) * 0.75);
+
+  return clamp((tScore * 0.40 + rhScore * 0.30 + vpdScore * 0.30) * 100.0, 0, 100);
+}
+
+function updateStatus() {
+  const minSoil = Math.min(state.soil1, state.soil2);
+  if (state.temp > 24 || state.rh > 75 || minSoil < 35) {
+    state.status = 'KRITIS';
+  } else if (
+    state.temp > state.thresholds.tempMax || state.temp < state.thresholds.tempMin ||
+    state.rh > state.thresholds.rhMax || state.rh < state.thresholds.rhMin ||
+    minSoil < state.thresholds.soilMin || minSoil > state.thresholds.soilMax ||
+    state.vpd < 0.40 || state.vpd > 0.80
+  ) {
+    state.status = 'WASPADA';
+  } else {
+    state.status = 'OPTIMAL';
+  }
+}
+
+function startPump(pump, seconds, reason) {
+  state.relays[`pump${pump}`] = true;
+  if (pumpTimers[pump]) clearTimeout(pumpTimers[pump]);
+  pumpTimers[pump] = setTimeout(() => {
+    state.relays[`pump${pump}`] = false;
+    pumpLastStop[pump] = state.uptimeSec;
+    pumpTimers[pump] = null;
+    log(`Pump ${pump} OFF after ${seconds}s (${reason})`);
+  }, seconds * 1000);
+  log(`Pump ${pump} ON for ${seconds}s (${reason})`);
+}
+
+function stopPump(pump, reason) {
+  if (pumpTimers[pump]) {
+    clearTimeout(pumpTimers[pump]);
+    pumpTimers[pump] = null;
+  }
+  if (state.relays[`pump${pump}`]) {
+    state.relays[`pump${pump}`] = false;
+    pumpLastStop[pump] = state.uptimeSec;
+    if (reason) log(`Pump ${pump} OFF (${reason})`);
+  }
+}
+
+function simulateAutomation() {
+  // Composition: grow light + LED strip follow the 16h photoperiod in phase 2.
+  if (state.autoMode) {
+    const lightOn = state.phase === 2;
+    if (state.relays.growLight !== lightOn) {
+      state.relays.growLight = lightOn;
+      log(`Auto: grow light ${lightOn ? 'ON' : 'OFF'} (phase ${state.phase})`);
+    }
+    if (state.relays.ledStrip !== lightOn) {
+      state.relays.ledStrip = lightOn;
+      log(`Auto: LED strip ${lightOn ? 'ON' : 'OFF'}`);
+    }
+
+    if (state.temp > state.thresholds.tempMax && !state.relays.peltier) {
+      state.relays.peltier = true;
+      state.relays.fan = true;
+      log('Auto: Peltier ON + fan interlocked (temperature above target)');
+    } else if (state.temp <= state.thresholds.tempMin + 0.5 && state.relays.peltier) {
+      state.relays.peltier = false;
+      log('Auto: Peltier OFF (temperature target reached)');
+    }
+
+    if (state.rh > state.thresholds.rhMax && !state.relays.fan) {
+      state.relays.fan = true;
+      log('Auto: fan ON (humidity above target)');
+    } else if (state.rh <= state.thresholds.rhMax - 5 && !state.relays.peltier && state.relays.fan) {
+      state.relays.fan = false;
+      log('Auto: fan OFF (humidity normalized)');
+    }
+
+    [1, 2].forEach((pump) => {
+      const soil = pump === 1 ? state.soil1 : state.soil2;
+      const alreadyOn = state.relays[`pump${pump}`];
+      const cooledDown = state.uptimeSec - pumpLastStop[pump] >= 60;
+      if (!alreadyOn && soil < state.thresholds.soilMin && cooledDown) {
+        startPump(pump, 8, `soil ${soil.toFixed(1)}% below target`);
+      }
+    });
+  }
+}
+
+function telemetryTick() {
+  state.uptimeSec += 1;
+
+  const targetTemp = 19.2 + Math.sin(state.uptimeSec * 0.15) * 0.15 -
+    (state.relays.peltier ? 0.9 : 0) + (state.relays.pump1 || state.relays.pump2 ? 0.05 : 0);
+  const targetRh = 64.5 + Math.cos(state.uptimeSec * 0.15) * 0.15 +
+    (state.relays.pump1 || state.relays.pump2 ? 1.5 : 0) - (state.relays.fan ? 2.5 : 0);
+
+  state.temp += (targetTemp - state.temp) * 0.18;
+  state.rh += (targetRh - state.rh) * 0.18;
+  state.temp = +clamp(state.temp, 15, 30).toFixed(2);
+  state.rh = +clamp(state.rh, 20, 95).toFixed(2);
+
+  if (state.relays.pump1) state.soil1 = Math.min(95, state.soil1 + 0.55);
+  else state.soil1 = Math.max(0, state.soil1 - 0.006);
+  if (state.relays.pump2) state.soil2 = Math.min(95, state.soil2 + 0.55);
+  else state.soil2 = Math.max(0, state.soil2 - 0.006);
+
+  state.soil1 = +state.soil1.toFixed(2);
+  state.soil2 = +state.soil2.toFixed(2);
+
+  state.adc1 = Math.round(state.thresholds.dry1 - (state.soil1 / 100) * (state.thresholds.dry1 - state.thresholds.wet1));
+  state.adc2 = Math.round(state.thresholds.dry2 - (state.soil2 / 100) * (state.thresholds.dry2 - state.thresholds.wet2));
+
+  const vpd = calcVpd(state.temp, state.rh);
+  state.vpSat = +vpd.vpSat.toFixed(3);
+  state.vpAct = +vpd.vpAct.toFixed(3);
+  state.vpd = +vpd.vpd.toFixed(3);
+  state.pcs = +calcPcs(state.temp, state.rh, state.vpd).toFixed(1);
+
+  if (state.relays.pump1) state.tank1Vol = Math.max(0, state.tank1Vol - 0.08);
+  if (state.relays.pump2) state.tank2Vol = Math.max(0, state.tank2Vol - 0.08);
+
+  updateStatus();
+  simulateAutomation();
+
+  if (state.uptimeSec - lastHistoryPush >= 3) {
+    lastHistoryPush = state.uptimeSec;
+    ['temp', 'rh', 'soil1', 'soil2'].forEach((key) => {
+      state.history[key].push(state[key]);
+      if (state.history[key].length > 20) state.history[key].shift();
+    });
+  }
+}
+
+function payload() {
+  const soilAvg = +((state.soil1 + state.soil2) / 2).toFixed(2);
+  const h = String(Math.floor(state.uptimeSec / 3600)).padStart(2, '0');
+  const m = String(Math.floor((state.uptimeSec % 3600) / 60)).padStart(2, '0');
+  const s = String(state.uptimeSec % 60).padStart(2, '0');
+
+  return {
+    ip: state.ip,
+    uptime: `${h}:${m}:${s}`,
+    status: state.status,
+    autoMode: state.autoMode,
+    phase: state.phase,
+    day: state.day,
+    temp: +state.temp.toFixed(2),
+    rh: +state.rh.toFixed(2),
+    soil1: state.soil1,
+    soil2: state.soil2,
+    soil: soilAvg,
+    adc1: state.adc1,
+    adc2: state.adc2,
+    soil1Voltage: +(state.adc1 * (3.3 / 4095)).toFixed(2),
+    soil2Voltage: +(state.adc2 * (3.3 / 4095)).toFixed(2),
+    rawSoilAdc: state.adc1,
+    soilVoltage: +(state.adc1 * (3.3 / 4095)).toFixed(2),
+    vpd: state.vpd,
+    vpSat: state.vpSat,
+    vpAct: state.vpAct,
+    pcs: state.pcs,
+    tank1Vol: +state.tank1Vol.toFixed(1),
+    tank2Vol: +state.tank2Vol.toFixed(1),
+    sensorFault: false,
+    dhtFault: false,
+    soil1Fault: false,
+    soil2Fault: false,
+    relays: state.relays,
+    thresholds: state.thresholds,
+    pins: state.pins,
+    history: state.history,
+    logs: state.logs
+  };
+}
 
 function serveStatic(req, res, filePath) {
   fs.readFile(filePath, (err, content) => {
@@ -99,8 +317,104 @@ function serveStatic(req, res, filePath) {
   });
 }
 
+function handleControl(url, res) {
+  const action = url.searchParams.get('action');
+  const nowTs = timeString();
+
+  if (action === 'flush') {
+    startPump(1, 5, 'emergency flush');
+    startPump(2, 5, 'emergency flush');
+    log('EMERGENCY FLUSH: both pumps ON for 5s');
+  } else if (action === 'pulsePump') {
+    const pump = parseInt(url.searchParams.get('pump'), 10) === 2 ? 2 : 1;
+    const seconds = clamp(parseInt(url.searchParams.get('seconds'), 10) || 5, 1, 30);
+    startPump(pump, seconds, 'manual pulse');
+  } else if (action === 'toggleRelay') {
+    const ch = parseInt(url.searchParams.get('ch'), 10);
+    if (state.autoMode) {
+      state.autoMode = false;
+      log('Mode switched to MANUAL override by relay click');
+    }
+
+    if (ch === 1) {
+      state.relays.peltier = !state.relays.peltier;
+      if (state.relays.peltier) {
+        state.relays.fan = true;
+        log('Manual: Peltier ON + fan interlocked ON');
+      } else {
+        log('Manual: Peltier OFF');
+      }
+    } else if (ch === 2) {
+      state.relays.fan = !state.relays.fan;
+      if (!state.relays.fan && state.relays.peltier) {
+        state.relays.peltier = false;
+        log('Safety interlock: Peltier forced OFF because fan was turned OFF');
+      } else {
+        log(`Manual: fan ${state.relays.fan ? 'ON' : 'OFF'}`);
+      }
+    } else if (ch === 3) {
+      state.relays.spare = !state.relays.spare;
+      log(`Manual: spare relay ${state.relays.spare ? 'ON' : 'OFF'}`);
+    } else if (ch === 4) {
+      state.relays.growLight = !state.relays.growLight;
+      log(`Manual: grow light ${state.relays.growLight ? 'ON' : 'OFF'}`);
+    } else if (ch === 5) {
+      state.relays.ledStrip = !state.relays.ledStrip;
+      log(`Manual: LED strip ${state.relays.ledStrip ? 'ON' : 'OFF'}`);
+    } else if (ch === 6) {
+      if (state.relays.pump1) stopPump(1, 'manual');
+      else startPump(1, 30, 'manual toggle');
+    } else if (ch === 7) {
+      if (state.relays.pump2) stopPump(2, 'manual');
+      else startPump(2, 30, 'manual toggle');
+    }
+  } else if (action === 'mode') {
+    state.autoMode = url.searchParams.get('val') === 'auto';
+    log(`Control mode: ${state.autoMode ? 'AUTOMATIC' : 'MANUAL'}`);
+  } else if (action === 'phase') {
+    state.phase = parseInt(url.searchParams.get('val'), 10) === 1 ? 1 : 2;
+    log(`Growth phase: ${state.phase === 1 ? 'germination blackout' : 'autotrophic light'}`);
+  } else if (action === 'day') {
+    state.day = clamp(parseInt(url.searchParams.get('val'), 10) || 1, 1, 10);
+    state.phase = state.day <= 3 ? 1 : 2;
+    log(`Cultivation day set to ${state.day}`);
+  } else if (action === 'setThreshold') {
+    const param = url.searchParams.get('param');
+    const val = parseFloat(url.searchParams.get('val'));
+    if (Object.prototype.hasOwnProperty.call(state.thresholds, param) && Number.isFinite(val)) {
+      const limits = {
+        tempMin: [5, 35], tempMax: [5, 40],
+        rhMin: [10, 95], rhMax: [10, 95],
+        soilMin: [5, 95], soilMax: [5, 95]
+      };
+      if (limits[param]) {
+        state.thresholds[param] = clamp(val, limits[param][0], limits[param][1]);
+        log(`Threshold ${param} set to ${state.thresholds[param]}`);
+      }
+    }
+  } else if (action === 'calibrateSoil') {
+    const sensor = parseInt(url.searchParams.get('sensor'), 10) === 2 ? 2 : 1;
+    const type = url.searchParams.get('type');
+    const adc = sensor === 2 ? state.adc2 : state.adc1;
+    if (type === 'dry') state.thresholds[`dry${sensor}`] = adc;
+    else if (type === 'wet') state.thresholds[`wet${sensor}`] = adc;
+    log(`Soil ${sensor} ${type} calibration stored at ADC ${adc}`);
+  } else if (action === 'refill') {
+    const tank = parseInt(url.searchParams.get('tank'), 10) === 2 ? 2 : 1;
+    if (tank === 1) state.tank1Vol = 1000;
+    else state.tank2Vol = 1000;
+    log(`Tank ${tank} estimate reset to 1000 mL`);
+  } else {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: false, error: 'unknown action' }));
+    return;
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ success: true, ts: nowTs }));
+}
+
 const server = http.createServer((req, res) => {
-  // Global CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin, Authorization, Accept');
@@ -111,185 +425,36 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+  const url = new URL(req.url, `http://${req.headers.host || `127.0.0.1:${PORT}`}`);
   const pathname = url.pathname;
 
   if (pathname === '/api/telemetry') {
-    state.uptimeSec += 1;
-    const h = String(Math.floor(state.uptimeSec / 3600)).padStart(2, '0');
-    const m = String(Math.floor((state.uptimeSec % 3600) / 60)).padStart(2, '0');
-    const s = String(state.uptimeSec % 60).padStart(2, '0');
-
-    // Natural gentle breathing variation in temperature and humidity
-    state.temp = +(20.3 + Math.sin(state.uptimeSec * 0.15) * 0.25).toFixed(1);
-    state.rh = +(57.6 + Math.cos(state.uptimeSec * 0.15) * 0.4).toFixed(1);
-
-    // Dynamic Tetens VPD computation
-    const vpSat = 0.61078 * Math.exp((17.27 * state.temp) / (state.temp + 237.3));
-    const vpAct = vpSat * (state.rh / 100.0);
-    state.vpSat = +vpSat.toFixed(2);
-    state.vpAct = +vpAct.toFixed(2);
-    state.vpd = +(vpSat - vpAct).toFixed(2);
-
-    // Soil ADC raw variation
-    state.rawSoilAdc = Math.round(3200 - (state.soil / 100) * (3200 - 1400));
-    state.soilVoltage = +(state.rawSoilAdc * (3.3 / 4095)).toFixed(2);
-
-    if (state.uptimeSec % 3 === 0) {
-      state.history.temp.shift();
-      state.history.temp.push(state.temp);
-      state.history.rh.shift();
-      state.history.rh.push(state.rh);
-    }
-
-    const payload = {
-      ip: state.ip,
-      uptime: `${h}:${m}:${s}`,
-      status: state.status,
-      autoMode: state.autoMode,
-      phase: state.phase,
-      day: state.day,
-      activeTank: state.activeTank,
-      temp: state.temp,
-      rh: state.rh,
-      soil: state.soil,
-      vpd: state.vpd,
-      vpSat: state.vpSat,
-      vpAct: state.vpAct,
-      rawSoilAdc: state.rawSoilAdc,
-      soilVoltage: state.soilVoltage,
-      pcs: state.pcs,
-      tank1Vol: state.tank1Vol,
-      tank2Vol: state.tank2Vol,
-      relays: state.relays,
-      valves: state.valves,
-      thresholds: state.thresholds,
-      pins: state.pins,
-      history: state.history,
-      logs: state.logs
-    };
-
+    telemetryTick();
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(payload));
-  } else if (pathname === '/api/control') {
-    const action = url.searchParams.get('action');
-    const nowTs = new Date().toTimeString().split(' ')[0];
-
-    if (action === 'flush') {
-      state.relays.spray1 = true;
-      state.valves.v1 = 90;
-      state.tank1Vol = Math.max(0, +(state.tank1Vol - 4.0).toFixed(1));
-      state.logs.unshift({ t: nowTs, m: "Emergency Flush: Semprot Air Baku Tangki 1 GPIO 16 (5s)" });
-      setTimeout(() => {
-        state.relays.spray1 = false;
-        state.valves.v1 = 0;
-      }, 5000);
-    } else if (action === 'toggleRelay') {
-      const ch = url.searchParams.get('ch');
-      if (state.autoMode) {
-        state.autoMode = false;
-        state.logs.unshift({ t: nowTs, m: "Mode Otomatis dialihkan ke MANUAL OVERRIDE oleh klik relay" });
-      }
-
-      if (ch === '1') {
-        state.relays.peltier = !state.relays.peltier;
-        if (state.relays.peltier) {
-          state.relays.fan = true; // Thermal safety interlock
-          state.logs.unshift({ t: nowTs, m: "Manual: Peltier (GPIO 19) ON + Heatsink Fan (GPIO 18) Auto-Locked ON 🔒" });
-        } else {
-          state.logs.unshift({ t: nowTs, m: "Manual: Peltier (GPIO 19) OFF" });
-        }
-      } else if (ch === '2') {
-        state.relays.fan = !state.relays.fan;
-        if (!state.relays.fan && state.relays.peltier) {
-          state.relays.peltier = false; // Thermal safety interlock
-          state.logs.unshift({ t: nowTs, m: "Proteksi Interlock: Peltier (GPIO 19) dipadamkan karena Heatsink Fan (GPIO 18) mati!" });
-        } else {
-          state.logs.unshift({ t: nowTs, m: `Manual: Heatsink Fan (GPIO 18) ${state.relays.fan ? 'ON' : 'OFF'}` });
-        }
-      } else if (ch === '3') {
-        state.relays.blower = !state.relays.blower;
-        state.logs.unshift({ t: nowTs, m: `Manual: DC Blower (GPIO 5) ${state.relays.blower ? 'ON' : 'OFF'}` });
-      } else if (ch === '4') {
-        state.relays.light = !state.relays.light;
-        state.logs.unshift({ t: nowTs, m: `Manual: Grow Light (GPIO 17) ${state.relays.light ? 'ON' : 'OFF'}` });
-      } else if (ch === '5') {
-        state.relays.spray1 = !state.relays.spray1;
-        state.valves.v1 = state.relays.spray1 ? 90 : 0;
-        state.logs.unshift({ t: nowTs, m: `Manual: Spray T1 (GPIO 16) ${state.relays.spray1 ? 'ON (Katup 1 90°)' : 'OFF (Katup 1 0°)'}` });
-      } else if (ch === '6') {
-        state.relays.spray2 = !state.relays.spray2;
-        state.valves.v2 = state.relays.spray2 ? 90 : 0;
-        state.logs.unshift({ t: nowTs, m: `Manual: Spray T2 (GPIO 4) ${state.relays.spray2 ? 'ON (Katup 2 90°)' : 'OFF (Katup 2 0°)'}` });
-      }
-    } else if (action === 'setServo') {
-      const s = url.searchParams.get('servo');
-      const angle = parseInt(url.searchParams.get('angle'), 10) || 0;
-      if (s === '1') {
-        state.valves.v1 = angle;
-        state.logs.unshift({ t: nowTs, m: `Manual Servo 1 (GPIO 25): Putar ke ${angle}°` });
-      } else if (s === '2') {
-        state.valves.v2 = angle;
-        state.logs.unshift({ t: nowTs, m: `Manual Servo 2 (GPIO 26): Putar ke ${angle}°` });
-      }
-    } else if (action === 'setThreshold') {
-      const param = url.searchParams.get('param');
-      const val = parseFloat(url.searchParams.get('val'));
-      if (state.thresholds[param] !== undefined) {
-        state.thresholds[param] = val;
-        state.logs.unshift({ t: nowTs, m: `Ambang Batas ${param} disetel ke ${val}` });
-      }
-    } else if (action === 'calibrateSoil') {
-      const type = url.searchParams.get('type');
-      state.logs.unshift({ t: nowTs, m: `Kalibrasi Titik ${type.toUpperCase()}: ADC ${state.rawSoilAdc} tersimpan` });
-    } else if (action === 'mode') {
-      state.autoMode = (url.searchParams.get('val') === 'auto');
-      state.logs.unshift({ t: nowTs, m: `Mode Kontrol: ${state.autoMode ? 'Otomatis' : 'Manual Override'}` });
-    } else if (action === 'phase') {
-      state.phase = parseInt(url.searchParams.get('val'), 10) || 1;
-      state.logs.unshift({ t: nowTs, m: `Fase Tumbuh: ${state.phase === 1 ? 'Perkecambahan' : 'Autotrofik'}` });
-    } else if (action === 'day') {
-      state.day = parseInt(url.searchParams.get('val'), 10) || 1;
-      state.logs.unshift({ t: nowTs, m: `Penyetel Hari: Hari ke-${state.day}` });
-    } else if (action === 'tank') {
-      state.activeTank = parseInt(url.searchParams.get('val'), 10) || 1;
-      state.logs.unshift({ t: nowTs, m: `Tangki Aktif: Tangki ${state.activeTank}` });
-    } else if (action === 'refill') {
-      const tank = url.searchParams.get('tank');
-      if (tank === '1') {
-        state.tank1Vol = 1000.0;
-        state.logs.unshift({ t: nowTs, m: "Tangki 1 (Air Baku) Diisi Ulang ke 1000 mL" });
-      }
-      if (tank === '2') {
-        state.tank2Vol = 1000.0;
-        state.logs.unshift({ t: nowTs, m: "Tangki 2 (Nutrisi Mikro) Diisi Ulang ke 1000 mL" });
-      }
-    }
-
-    if (state.logs.length > 12) state.logs.pop();
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
-  } else {
-    // Static File Serving
-    let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
-    if (safePath === '/' || safePath === '\\') safePath = '/index.html';
-
-    let targetFile = path.join(PUBLIC_DIR, safePath);
-
-    // Fallback check: if requested file doesn't exist in public, check root
-    if (!fs.existsSync(targetFile)) {
-      const rootFallback = path.join(__dirname, safePath);
-      if (fs.existsSync(rootFallback) && !fs.statSync(rootFallback).isDirectory()) {
-        targetFile = rootFallback;
-      }
-    }
-
-    serveStatic(req, res, targetFile);
+    res.end(JSON.stringify(payload()));
+    return;
   }
+
+  if (pathname === '/api/control') {
+    handleControl(url, res);
+    return;
+  }
+
+  // Standalone (waifu) dashboard, same file that is embedded in the ESP32 firmware.
+  if (pathname === '/dashboard.html' || pathname === '/dashboard' || pathname === '/waifu') {
+    serveStatic(req, res, DASHBOARD_FILE);
+    return;
+  }
+
+  // Main modern console from public/.
+  let safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
+  if (safePath === '/' || safePath === '\\') safePath = '/index.html';
+  serveStatic(req, res, path.join(PUBLIC_DIR, safePath));
 });
 
-const PORT = 8080;
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Kebun Biosfer Admin Server running at http://127.0.0.1:${PORT}/`);
+  console.log(`Biosphere server running:`);
+  console.log(`  Main console : http://127.0.0.1:${PORT}/`);
+  console.log(`  Waifu console: http://127.0.0.1:${PORT}/dashboard.html`);
+  console.log(`  API          : http://127.0.0.1:${PORT}/api/telemetry`);
 });

@@ -1,0 +1,12 @@
+{
+  "name": "schoolstem-biosphere",
+  "version": "2.1.0",
+  "private": true,
+  "description": "ESP32 biosphere cabin firmware + local simulation console",
+  "scripts": {
+    "start": "node server.js",
+    "embed": "node tools/embed-dashboard.js",
+    "check:embed": "node tools/embed-dashboard.js --check",
+    "check:js": "node --check server.js && node --check public/app.js && node --check tools/embed-dashboard.js"
+  }
+}
