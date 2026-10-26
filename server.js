@@ -72,6 +72,29 @@ let state = {
     pump2: 18,
     statusLed: 2
   },
+  health: {
+    dhtOk: true,
+    dhtAgeMs: 900,
+    dhtFails: 0,
+    dhtReinits: 0,
+    dhtRecoveries: 0,
+    soil1Ok: true,
+    soil1AgeMs: 700,
+    soil1Fails: 0,
+    soil1Recoveries: 0,
+    soil2Ok: true,
+    soil2AgeMs: 700,
+    soil2Fails: 0,
+    soil2Recoveries: 0,
+    wifiConnected: true,
+    wifiRssi: -48,
+    wifiReconnects: 0,
+    wifiAttempts: 0,
+    apFallback: false,
+    heap: 242000,
+    uptimeMs: 620000,
+    sensorsOk: true
+  },
   history: {
     temp: [19.0, 19.1, 19.0, 19.1, 19.2, 19.1, 19.0, 19.1, 19.0, 19.0, 19.1, 19.0, 19.0, 19.1, 19.1, 19.0, 19.0, 19.0, 19.0, 19.0],
     rh: [64.0, 64.2, 64.4, 64.3, 64.1, 64.0, 64.1, 64.0, 63.9, 64.0, 64.2, 64.1, 64.0, 64.0, 64.1, 64.0, 64.0, 64.0, 64.0, 64.0],
@@ -293,6 +316,13 @@ function payload() {
     relays: state.relays,
     thresholds: state.thresholds,
     pins: state.pins,
+    health: {
+      ...state.health,
+      uptimeMs: state.uptimeSec * 1000,
+      dhtAgeMs: 900,
+      soil1AgeMs: 700,
+      soil2AgeMs: 700
+    },
     ota: { web: false, arduino: false, hostname: null },
     history: state.history,
     logs: state.logs
@@ -405,6 +435,35 @@ function handleControl(url, res) {
     if (tank === 1) state.tank1Vol = 1000;
     else state.tank2Vol = 1000;
     log(`Tank ${tank} estimate reset to 1000 mL`);
+  } else if (action === 'reinitSensors') {
+    state.health.dhtOk = true;
+    state.health.soil1Ok = true;
+    state.health.soil2Ok = true;
+    state.health.dhtFails = 0;
+    state.health.soil1Fails = 0;
+    state.health.soil2Fails = 0;
+    state.health.dhtReinits += 1;
+    log('Sensor bus re-initialized (simulation)');
+  } else if (action === 'reconnectWiFi') {
+    state.health.wifiConnected = true;
+    state.health.apFallback = false;
+    state.health.wifiReconnects += 1;
+    state.health.wifiRssi = -48;
+    log('WiFi reconnect requested (simulation)');
+  } else if (action === 'allOff') {
+    state.autoMode = false;
+    Object.keys(state.relays).forEach((key) => { state.relays[key] = false; });
+    [1, 2].forEach((pump) => {
+      if (pumpTimers[pump]) clearTimeout(pumpTimers[pump]);
+      pumpTimers[pump] = null;
+    });
+    log('Manual: ALL outputs OFF');
+  } else if (action === 'restart') {
+    Object.keys(state.relays).forEach((key) => { state.relays[key] = false; });
+    state.uptimeSec = 0;
+    state.autoMode = true;
+    state.health.wifiConnected = true;
+    log('Controller restart requested (simulation reset)');
   } else {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: 'unknown action' }));
@@ -444,6 +503,12 @@ const server = http.createServer((req, res) => {
   // Standalone (waifu) dashboard, same file that is embedded in the ESP32 firmware.
   if (pathname === '/dashboard.html' || pathname === '/dashboard' || pathname === '/waifu') {
     serveStatic(req, res, DASHBOARD_FILE);
+    return;
+  }
+
+  // OTA page preview in simulation. Uploading is hardware-only.
+  if (pathname === '/update') {
+    serveStatic(req, res, path.join(__dirname, 'ota.html'));
     return;
   }
 

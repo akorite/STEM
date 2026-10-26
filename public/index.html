@@ -597,6 +597,27 @@
               </button>
             </div>
           </div>
+
+          <div class="health-rail" aria-label="Sensor health and recovery">
+            <div class="health-pill" id="healthDht" title="DHT11 temperature and humidity link">
+              <span class="health-dot"></span><span class="health-label">DHT11</span><span class="health-value">CHECK</span>
+            </div>
+            <div class="health-pill" id="healthSoil1" title="Capacitive soil probe 1 / zone A">
+              <span class="health-dot"></span><span class="health-label">SOIL 1</span><span class="health-value">CHECK</span>
+            </div>
+            <div class="health-pill" id="healthSoil2" title="Capacitive soil probe 2 / zone B">
+              <span class="health-dot"></span><span class="health-label">SOIL 2</span><span class="health-value">CHECK</span>
+            </div>
+            <div class="health-pill" id="healthWifi" title="WiFi link and signal strength">
+              <span class="health-dot"></span><span class="health-label">WIFI</span><span class="health-value">CHECK</span>
+            </div>
+            <div class="health-actions">
+              <button class="health-btn" id="btnHealthRecheck" type="button" title="Re-initialize the DHT11 and soil probes">RE-CHECK</button>
+              <button class="health-btn" id="btnHealthReconnect" type="button" title="Retry the WiFi connection">RECONNECT</button>
+              <button class="health-btn health-btn-danger" id="btnHealthAllOff" type="button" title="Switch to manual and turn every output off">ALL OFF</button>
+              <button class="health-btn" id="btnHealthRestart" type="button" title="Restart the ESP32">RESTART</button>
+            </div>
+          </div>
         </section>
 
         <!-- Chronological System Operations Log -->

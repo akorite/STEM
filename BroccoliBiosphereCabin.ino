@@ -177,8 +177,10 @@ struct SystemState {
   // OTA update state
   bool otaInProgress = false;
   bool otaUploadOk = false;
+  bool otaWebUpload = false;
   bool otaRebootPending = false;
   uint32_t otaRebootAt = 0;
+  uint32_t otaLastActivity = 0;
 
   // Emergency flush
   bool flushActive = false;
@@ -191,12 +193,41 @@ struct SystemState {
   uint32_t pulseDurationMs = 0;
 
   // Sensor fault debouncing
-  uint8_t dhtFailCount = 0;
   bool dhtFault = false;
+
+  // Manual restart request
+  bool restartPending = false;
+  uint32_t restartAt = 0;
 
   // Reservoir estimates
   float tank1VolumeMl = TANK_MAX_CAPACITY_ML;
   float tank2VolumeMl = TANK_MAX_CAPACITY_ML;
+};
+
+struct SensorHealth {
+  bool dhtOk = false;
+  bool soil1Ok = false;
+  bool soil2Ok = false;
+  bool wifiConnected = false;
+  bool apFallback = false;
+
+  uint32_t lastDhtOk = 0;
+  uint32_t lastSoil1Ok = 0;
+  uint32_t lastSoil2Ok = 0;
+  uint32_t lastDhtReinit = 0;
+  uint32_t lastWifiAttempt = 0;
+  uint32_t lastWifiRecovery = 0;
+  uint32_t wifiDownSince = 0;
+
+  uint16_t dhtFails = 0;
+  uint16_t soil1Fails = 0;
+  uint16_t soil2Fails = 0;
+  uint16_t dhtRecoveries = 0;
+  uint16_t soil1Recoveries = 0;
+  uint16_t soil2Recoveries = 0;
+  uint16_t dhtReinits = 0;
+  uint16_t wifiReconnects = 0;
+  uint16_t wifiAttempts = 0;
 };
 
 // Circular buffers for the rolling telemetry chart (last 20 samples)
@@ -224,6 +255,7 @@ WebServer server(80);
 
 AgronomicMetrics metrics;
 SystemState state;
+SensorHealth health;
 
 // Non-blocking timing trackers
 uint32_t lastSensorPollTime   = 0;
@@ -430,6 +462,7 @@ void triggerSafeModeFallback() {
     addSystemLog("CRITICAL: DHT11 read failed. Safe mode: fan ON, Peltier/pumps OFF");
   }
   state.dhtFault = true;
+  health.dhtOk = false;
   metrics.status = STATUS_SAFEMODE;
   applyPeltier(false);
   applyFan(true);
@@ -444,12 +477,28 @@ void triggerSafeModeFallback() {
 // =========================================================================================
 
 int readAdcAverage(uint8_t pin) {
-  uint32_t sum = 0;
-  for (uint8_t i = 0; i < 8; i++) {
-    sum += analogRead(pin);
+  // 12 samples, drop the two lowest and two highest, average the middle eight.
+  // This rejects contact noise and single-sample spikes without adding delay().
+  const uint8_t samplesCount = 12;
+  int samples[samplesCount];
+  for (uint8_t i = 0; i < samplesCount; i++) {
+    samples[i] = analogRead(pin);
     delayMicroseconds(250);
   }
-  return (int)(sum / 8);
+
+  for (uint8_t i = 1; i < samplesCount; i++) {
+    int key = samples[i];
+    int j = i - 1;
+    while (j >= 0 && samples[j] > key) {
+      samples[j + 1] = samples[j];
+      j--;
+    }
+    samples[j + 1] = key;
+  }
+
+  uint32_t sum = 0;
+  for (uint8_t i = 2; i < samplesCount - 2; i++) sum += samples[i];
+  return (int)(sum / (samplesCount - 4));
 }
 
 float adcToMoisturePct(int raw, int dryRaw, int wetRaw) {
@@ -491,14 +540,28 @@ void pollSensors() {
                   rawRh >= 0.0f && rawRh <= 100.0f;
 
   if (!dhtValid) {
-    state.dhtFailCount++;
-    if (state.dhtFailCount >= 3 && !state.dhtFault) {
+    health.dhtOk = false;
+    if (health.dhtFails < 999) health.dhtFails++;
+
+    if (health.dhtFails >= 3 && !state.dhtFault) {
       triggerSafeModeFallback();
     }
+
+    // Self-heal: retry the DHT bus every 15 s after a sustained fault.
+    if (health.dhtFails >= 6 &&
+        (millis() - health.lastDhtReinit >= 15000UL)) {
+      dht.begin();
+      health.lastDhtReinit = millis();
+      if (health.dhtReinits < 999) health.dhtReinits++;
+      addSystemLog("Self-heal: DHT11 bus re-initialized");
+    }
   } else {
-    state.dhtFailCount = 0;
+    health.dhtOk = true;
+    health.dhtFails = 0;
+    health.lastDhtOk = millis();
     if (state.dhtFault) {
       state.dhtFault = false;
+      if (health.dhtRecoveries < 999) health.dhtRecoveries++;
       addSystemLog("DHT11 recovered; automatic climate control resumed");
     }
     metrics.temperature = rawT;
@@ -516,12 +579,37 @@ void pollSensors() {
 
   metrics.soil1Fault = !valid1;
   metrics.soil2Fault = !valid2;
+  health.soil1Ok = valid1;
+  health.soil2Ok = valid2;
 
   if (valid1) {
     metrics.soil1 = adcToMoisturePct(raw1, state.soil1DryRaw, state.soil1WetRaw);
+    health.lastSoil1Ok = millis();
+    if (health.soil1Fails >= 3) {
+      if (health.soil1Recoveries < 999) health.soil1Recoveries++;
+      addSystemLog("Self-heal: soil probe 1 readable again");
+    }
+    health.soil1Fails = 0;
+  } else {
+    if (health.soil1Fails < 999) health.soil1Fails++;
+    if (health.soil1Fails == 5) {
+      addSystemLog("Fault: soil probe 1 unreadable; pump 1 disabled");
+    }
   }
+
   if (valid2) {
     metrics.soil2 = adcToMoisturePct(raw2, state.soil2DryRaw, state.soil2WetRaw);
+    health.lastSoil2Ok = millis();
+    if (health.soil2Fails >= 3) {
+      if (health.soil2Recoveries < 999) health.soil2Recoveries++;
+      addSystemLog("Self-heal: soil probe 2 readable again");
+    }
+    health.soil2Fails = 0;
+  } else {
+    if (health.soil2Fails < 999) health.soil2Fails++;
+    if (health.soil2Fails == 5) {
+      addSystemLog("Fault: soil probe 2 unreadable; pump 2 disabled");
+    }
   }
 
   if (valid1 && valid2) {
@@ -767,30 +855,8 @@ void otaCutOutputs() {
 }
 
 void handleOTAForm() {
-  String page;
-  page.reserve(2200);
-  page += F("<!DOCTYPE html><html lang='id'><head><meta charset='UTF-8'>"
-            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-            "<title>OTA Update - Biosphere Cabin</title>"
-            "<style>body{font-family:system-ui,sans-serif;background:#f8fafc;color:#0f172a;"
-            "max-width:560px;margin:40px auto;padding:24px}h1{font-size:1.3rem}"
-            ".card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;"
-            "box-shadow:0 8px 24px rgba(15,23,42,.06)}input{width:100%;padding:12px;"
-            "border:1px solid #cbd5e1;border-radius:10px;margin:12px 0}"
-            "button{background:#059669;color:#fff;border:0;border-radius:10px;padding:12px 18px;"
-            "font-weight:700;font-size:1rem;cursor:pointer}a{color:#0284c7}"
-            ".warn{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;"
-            "font-size:.86rem;color:#92400e}</style></head><body><div class='card'>"
-            "<h1>⬆ OTA Firmware Update</h1>"
-            "<p>Choose the <b>.bin</b> file exported from Arduino IDE<br>"
-            "(Sketch → Export Compiled Binary).</p>"
-            "<p class='warn'>Use an OTA-capable partition scheme. Do not power off during upload.</p>"
-            "<form method='POST' action='/update' enctype='multipart/form-data'>"
-            "<input type='file' name='firmware' accept='.bin,application/octet-stream' required>"
-            "<button type='submit'>Upload Firmware</button></form>"
-            "<p style='margin-top:18px'><a href='/'>← Back to dashboard</a></p>"
-            "</div></body></html>");
-  server.send(200, "text/html; charset=utf-8", page);
+  server.sendHeader("Cache-Control", "no-store");
+  server.send_P(200, "text/html; charset=utf-8", OTA_HTML);
 }
 
 void handleOTAUpload() {
@@ -799,7 +865,9 @@ void handleOTAUpload() {
   if (upload.status == UPLOAD_FILE_START) {
     state.otaInProgress = true;
     state.otaUploadOk = false;
+    state.otaWebUpload = true;
     state.otaRebootPending = false;
+    state.otaLastActivity = millis();
     otaCutOutputs();
     addSystemLog("OTA update started; outputs forced OFF");
     Serial.printf("[OTA] Receiving: %s\n", upload.filename.c_str());
@@ -807,23 +875,28 @@ void handleOTAUpload() {
       Update.printError(Serial);
     }
   } else if (upload.status == UPLOAD_FILE_WRITE) {
+    state.otaLastActivity = millis();
     if (state.otaInProgress && Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
       Update.printError(Serial);
     }
   } else if (upload.status == UPLOAD_FILE_END) {
+    state.otaLastActivity = millis();
     if (state.otaInProgress && Update.end(true)) {
       state.otaUploadOk = true;
+      state.otaWebUpload = false;
       addSystemLog("OTA upload complete; rebooting");
       Serial.printf("[OTA] Success: %u bytes\n", (unsigned)upload.totalSize);
     } else {
       Update.printError(Serial);
       state.otaInProgress = false;
+      state.otaWebUpload = false;
       addSystemLog("OTA update failed");
     }
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
     Update.abort();
     state.otaInProgress = false;
     state.otaUploadOk = false;
+    state.otaWebUpload = false;
     addSystemLog("OTA upload aborted");
   }
 }
@@ -837,22 +910,41 @@ void handleOTAUpdate() {
   if (ok) {
     page += F("<!DOCTYPE html><html><head><meta charset='UTF-8'>"
               "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-              "<title>OTA Success</title></head><body style='font-family:system-ui;"
-              "max-width:520px;margin:40px auto;padding:24px;background:#f8fafc;color:#0f172a'>"
-              "<div style='background:#ecfdf5;border:1px solid #a7f3d0;border-radius:16px;padding:22px'>"
-              "<h1>✅ Update successful</h1><p>The cabin is rebooting with the new firmware.</p>"
-              "<p>Reconnect in about 10 seconds.</p></div></body></html>");
+              "<title>OTA Success</title></head>"
+              "<body style='font-family:system-ui;max-width:560px;margin:40px auto;padding:24px;"
+              "background-color:#FFF7FA;background-image:radial-gradient(#FAD4DF 1.2px,transparent 1.2px);"
+              "background-size:22px 22px;color:#2E262C'>"
+              "<div style='background:#fff;border:2px solid #F9CCD7;border-radius:24px;padding:26px;"
+              "box-shadow:0 8px 24px rgba(244,63,94,.08)'>"
+              "<span style='display:inline-block;background:#D1FAE5;border:1px solid #A7F3D0;"
+              "color:#065F46;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800'>"
+              "UPDATE OK</span>"
+              "<h1 style='font-size:1.5rem;margin:14px 0 8px'>🌱 Update successful</h1>"
+              "<p style='color:#6F5D67;line-height:1.55'>The cabin is rebooting with the new firmware. "
+              "Capy is keeping the power cable safe. Reconnect in about 10 seconds.</p>"
+              "<p style='margin-top:18px'><a href='/' style='color:#0369A1;font-weight:800'>"
+              "← Back to dashboard</a></p></div></body></html>");
     state.otaRebootPending = true;
     state.otaRebootAt = millis() + 1500UL;
   } else {
     page += F("<!DOCTYPE html><html><head><meta charset='UTF-8'>"
               "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-              "<title>OTA Failed</title></head><body style='font-family:system-ui;"
-              "max-width:520px;margin:40px auto;padding:24px;background:#f8fafc;color:#0f172a'>"
-              "<div style='background:#fff1f2;border:1px solid #fecdd3;border-radius:16px;padding:22px'>"
-              "<h1>❌ Update failed</h1><p>Check the partition scheme and the .bin file, then retry.</p>"
-              "<p><a href='/update'>Back to OTA</a></p></div></body></html>");
+              "<title>OTA Failed</title></head>"
+              "<body style='font-family:system-ui;max-width:560px;margin:40px auto;padding:24px;"
+              "background-color:#FFF7FA;background-image:radial-gradient(#FAD4DF 1.2px,transparent 1.2px);"
+              "background-size:22px 22px;color:#2E262C'>"
+              "<div style='background:#fff;border:2px solid #F9CCD7;border-radius:24px;padding:26px;"
+              "box-shadow:0 8px 24px rgba(244,63,94,.08)'>"
+              "<span style='display:inline-block;background:#FFE4E6;border:1px solid #FECDD3;"
+              "color:#BE123C;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800'>"
+              "OTA NEEDS HELP</span>"
+              "<h1 style='font-size:1.5rem;margin:14px 0 8px'>🛠️ Update failed</h1>"
+              "<p style='color:#6F5D67;line-height:1.55'>Check the OTA partition scheme and the .bin file, "
+              "then retry. If web OTA keeps failing, upload once over USB.</p>"
+              "<p style='margin-top:18px'><a href='/update' style='color:#BE123C;font-weight:800'>"
+              "← Back to OTA</a></p></div></body></html>");
     state.otaInProgress = false;
+    state.otaWebUpload = false;
   }
   server.send(200, "text/html; charset=utf-8", page);
 }
@@ -860,6 +952,65 @@ void handleOTAUpdate() {
 String currentIpString() {
   if (WiFi.status() == WL_CONNECTED) return WiFi.localIP().toString();
   return WiFi.softAPIP().toString();
+}
+
+void startFallbackAP() {
+  if (health.apFallback) return;
+
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP(FALLBACK_AP_SSID, FALLBACK_AP_PASSWORD);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  health.apFallback = true;
+  health.lastWifiAttempt = millis();
+  Serial.printf("[Wi-Fi] Fallback AP active: %s / %s at %s\n",
+                FALLBACK_AP_SSID, FALLBACK_AP_PASSWORD,
+                WiFi.softAPIP().toString().c_str());
+  addSystemLog("Fallback AP active; still retrying the STA link");
+}
+
+void processWiFiSelfHeal() {
+  if (state.otaInProgress) return;
+
+  uint32_t now = millis();
+  bool connected = (WiFi.status() == WL_CONNECTED);
+
+  if (connected) {
+    if (!health.wifiConnected) {
+      health.wifiConnected = true;
+      health.wifiDownSince = 0;
+      health.lastWifiRecovery = now;
+      if (health.wifiReconnects < 999) health.wifiReconnects++;
+      addSystemLog("Self-heal: WiFi link recovered");
+    }
+
+    // Drop the fallback AP after a stable STA link, but keep it during the first minute.
+    if (health.apFallback && (now - health.lastWifiRecovery >= 60000UL)) {
+      WiFi.softAPdisconnect(true);
+      WiFi.mode(WIFI_STA);
+      health.apFallback = false;
+      addSystemLog("Fallback AP stopped; STA link is stable");
+    }
+    return;
+  }
+
+  if (health.wifiConnected) {
+    health.wifiConnected = false;
+    health.wifiDownSince = now;
+    addSystemLog("WiFi link lost; starting automatic recovery");
+  }
+  if (health.wifiDownSince == 0) health.wifiDownSince = now;
+
+  // Retry the stored STA credentials every 15 s.
+  if (now - health.lastWifiAttempt >= 15000UL) {
+    health.lastWifiAttempt = now;
+    if (health.wifiAttempts < 999) health.wifiAttempts++;
+    WiFi.reconnect();
+  }
+
+  // If the router stays unreachable for 30 s, bring up the fallback AP.
+  if (!health.apFallback && (now - health.wifiDownSince >= 30000UL)) {
+    startFallbackAP();
+  }
 }
 
 void handleTelemetryApi() {
@@ -955,6 +1106,35 @@ void handleTelemetryApi() {
   json += "\"pump1\":" + String(PIN_RELAY_PUMP1) + ",";
   json += "\"pump2\":" + String(PIN_RELAY_PUMP2) + ",";
   json += "\"statusLed\":" + String(PIN_STATUS_LED);
+  json += "},";
+
+  uint32_t nowMs = millis();
+  uint32_t dhtAge = health.lastDhtOk ? (nowMs - health.lastDhtOk) : 0;
+  uint32_t soil1Age = health.lastSoil1Ok ? (nowMs - health.lastSoil1Ok) : 0;
+  uint32_t soil2Age = health.lastSoil2Ok ? (nowMs - health.lastSoil2Ok) : 0;
+
+  json += "\"health\":{";
+  json += "\"dhtOk\":" + String(health.dhtOk ? "true" : "false") + ",";
+  json += "\"dhtAgeMs\":" + String(dhtAge) + ",";
+  json += "\"dhtFails\":" + String(health.dhtFails) + ",";
+  json += "\"dhtReinits\":" + String(health.dhtReinits) + ",";
+  json += "\"dhtRecoveries\":" + String(health.dhtRecoveries) + ",";
+  json += "\"soil1Ok\":" + String(health.soil1Ok ? "true" : "false") + ",";
+  json += "\"soil1AgeMs\":" + String(soil1Age) + ",";
+  json += "\"soil1Fails\":" + String(health.soil1Fails) + ",";
+  json += "\"soil1Recoveries\":" + String(health.soil1Recoveries) + ",";
+  json += "\"soil2Ok\":" + String(health.soil2Ok ? "true" : "false") + ",";
+  json += "\"soil2AgeMs\":" + String(soil2Age) + ",";
+  json += "\"soil2Fails\":" + String(health.soil2Fails) + ",";
+  json += "\"soil2Recoveries\":" + String(health.soil2Recoveries) + ",";
+  json += "\"wifiConnected\":" + String(health.wifiConnected ? "true" : "false") + ",";
+  json += "\"wifiRssi\":" + String(WiFi.RSSI()) + ",";
+  json += "\"wifiReconnects\":" + String(health.wifiReconnects) + ",";
+  json += "\"wifiAttempts\":" + String(health.wifiAttempts) + ",";
+  json += "\"apFallback\":" + String(health.apFallback ? "true" : "false") + ",";
+  json += "\"heap\":" + String(ESP.getFreeHeap()) + ",";
+  json += "\"uptimeMs\":" + String(nowMs) + ",";
+  json += "\"sensorsOk\":" + String((health.dhtOk && health.soil1Ok && health.soil2Ok) ? "true" : "false");
   json += "},";
 
   json += "\"ota\":{";
@@ -1116,6 +1296,34 @@ void handleControlApi() {
     else if (param == "soilMin") state.targetSoilMin = constrain(val, 5.0f, 95.0f);
     else if (param == "soilMax") state.targetSoilMax = constrain(val, 5.0f, 95.0f);
     addSystemLog("Agronomic threshold updated");
+  } else if (action == "reinitSensors") {
+    dht.begin();
+    health.lastDhtReinit = millis();
+    if (health.dhtReinits < 999) health.dhtReinits++;
+    health.dhtFails = 0;
+    health.soil1Fails = 0;
+    health.soil2Fails = 0;
+    addSystemLog("Manual sensor re-initialization requested");
+  } else if (action == "reconnectWiFi") {
+    health.lastWifiAttempt = 0;
+    health.wifiDownSince = millis();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    addSystemLog("Manual WiFi reconnect requested");
+  } else if (action == "allOff") {
+    state.autoMode = false;
+    stopSinglePulse();
+    state.flushActive = false;
+    applyPeltier(false);
+    applyFan(false);
+    applyGrowLight(false);
+    applyLedStrip(false);
+    applySpare(false);
+    stopAllPumps();
+    addSystemLog("Manual: ALL outputs OFF");
+  } else if (action == "restart") {
+    state.restartPending = true;
+    state.restartAt = millis() + 800UL;
+    addSystemLog("Manual restart requested");
   } else {
     server.send(400, "application/json", "{\"error\":\"unknown action\"}");
     return;
@@ -1182,17 +1390,15 @@ void setup() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
+    health.wifiConnected = true;
+    health.lastWifiRecovery = millis();
     Serial.printf("\n[Wi-Fi] Connected. IP: %s\n", WiFi.localIP().toString().c_str());
     char msg[96];
     snprintf(msg, sizeof(msg), "WiFi connected: %s", WiFi.localIP().toString().c_str());
     addSystemLog(msg);
   } else {
     Serial.println("\n[Wi-Fi] STA timeout, starting fallback AP...");
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(FALLBACK_AP_SSID, FALLBACK_AP_PASSWORD);
-    Serial.printf("[Wi-Fi] AP: %s  IP: %s\n", FALLBACK_AP_SSID,
-                  WiFi.softAPIP().toString().c_str());
-    addSystemLog("WiFi STA timeout; fallback access point started");
+    startFallbackAP();
   }
 
   if (MDNS.begin(MDNS_HOSTNAME)) {
@@ -1205,6 +1411,7 @@ void setup() {
   ArduinoOTA.setPassword(OTA_PASSWORD);
   ArduinoOTA.onStart([]() {
     state.otaInProgress = true;
+    state.otaWebUpload = false;
     otaCutOutputs();
     addSystemLog("ArduinoOTA update started; outputs forced OFF");
   });
@@ -1246,10 +1453,25 @@ void setup() {
 void loop() {
   server.handleClient();
   ArduinoOTA.handle();
+  processWiFiSelfHeal();
 
   if (state.otaRebootPending && millis() >= state.otaRebootAt) {
     Serial.println("[OTA] Rebooting into new firmware...");
     ESP.restart();
+  }
+
+  if (state.restartPending && millis() >= state.restartAt) {
+    Serial.println("[SYS] Manual restart requested.");
+    ESP.restart();
+  }
+
+  // If a browser OTA upload stalls, release the controller and restore auto control.
+  if (state.otaInProgress && state.otaWebUpload &&
+      (millis() - state.otaLastActivity >= 60000UL)) {
+    Update.abort();
+    state.otaInProgress = false;
+    state.otaWebUpload = false;
+    addSystemLog("Self-heal: stalled OTA upload cancelled");
   }
 
   uint32_t now = millis();

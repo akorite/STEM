@@ -58,6 +58,9 @@ Power each relay board from its rated coil voltage (usually **5 V**, from the ES
 - **mDNS** — on a normal LAN the console is also available at `http://biosphere.local/`.
 - **Embedded dashboard** — the ESP32 serves the standalone waifu console at `/` and `/dashboard`, so no laptop is needed for a demo. The API is at `/api/telemetry` and `/api/control`.
 - **OTA updates** — browser upload at `/update` and Arduino IDE network-port upload as `biosphere`; outputs are forced off during an update.
+- **Sensor self-heal** — DHT11 is re-initialized every 15 s after a sustained fault; soil probes use a 12-sample trimmed average, disable their pump when unreadable, and log recovery. The UI reports each sensor’s link state.
+- **WiFi self-heal** — the board retries the router every 15 s, keeps a fallback AP alive while offline, and drops the AP after the STA link is stable for 60 s.
+- **Manual recovery** — `reinitSensors`, `reconnectWiFi`, `allOff`, and `restart` are available from the REST API and both consoles.
 
 Set your Wi-Fi credentials at the top of `BroccoliBiosphereCabin.ino`:
 
@@ -70,8 +73,9 @@ const char* WIFI_PASSWORD = "SAujian1234";
 
 ```
 ├── BroccoliBiosphereCabin.ino   # ESP32 firmware (REST API + embedded dashboard)
-├── dashboard_html.h             # AUTO-GENERATED from dashboard.html
+├── dashboard_html.h             # AUTO-GENERATED from dashboard.html + ota.html
 ├── dashboard.html               # Standalone compact console (served by ESP32 and Node)
+├── ota.html                     # Pastel web OTA page with Brocco-chan + Capy
 ├── server.js                    # Local simulation server + static file server
 ├── index.html                   # Redirect helper for the public console
 ├── public/                      # Main modern console (HTML/CSS/JS, zero dependencies)
@@ -88,6 +92,7 @@ npm start
 
 - Main console: <http://127.0.0.1:8080/>
 - Standalone console: <http://127.0.0.1:8080/dashboard.html>
+- OTA page preview: <http://127.0.0.1:8080/update> (upload disabled in simulation)
 - API: <http://127.0.0.1:8080/api/telemetry>
 
 The Node server simulates temperature, humidity, both soil probes, VPD, PCS, relays, pump pulses, and the automatic control loop. Use the target field in the main console to point it at a physical ESP32 instead.
@@ -167,7 +172,7 @@ Key fields:
 }
 ```
 
-Also included: `history` (20 samples of temp/RH/soil1/soil2), `logs`, `vpSat`, `vpAct`, `tank1Vol`, `tank2Vol`, fault flags, and 3.3 V ADC voltages.
+Also included: `history` (20 samples of temp/RH/soil1/soil2), `logs`, `vpSat`, `vpAct`, `tank1Vol`, `tank2Vol`, fault flags, 3.3 V ADC voltages, and a `health` object with per-sensor link state, fail counters, WiFi RSSI/recoveries, free heap, and `sensorsOk`.
 
 ### `POST /api/control`
 
@@ -181,6 +186,10 @@ Also included: `history` (20 samples of temp/RH/soil1/soil2), `logs`, `vpSat`, `
 | `pulsePump` | `pump=1\|2&seconds=1..30` | Timed single-pump run |
 | `setThreshold` | `param=tempMin...&val=` | Update a setpoint |
 | `calibrateSoil` | `sensor=1\|2&type=dry\|wet` | Store current ADC as calibration point |
+| `reinitSensors` | — | Re-initialize DHT11 and clear soil fault counters |
+| `reconnectWiFi` | — | Retry the stored WiFi credentials |
+| `allOff` | — | Manual mode + every relay and pump OFF |
+| `restart` | — | Restart the ESP32 |
 | `refill` | `tank=1\|2` | Reset the estimated reservoir volume |
 
 Relay channels: `1` Peltier, `2` Fan, `3` Spare, `4` Grow light, `5` LED strip, `6` Pump 1, `7` Pump 2.

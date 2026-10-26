@@ -25,9 +25,11 @@ Benchtop laboratory environment, running continuously on desktop/laptop displays
 - Real-time telemetry: Temperature, Relative Humidity, dual-zone Soil Moisture (GPIO 34/35), VPD (Tetens), Plant Comfort Score (PCS), estimated reservoir volumes.
 - Real-time 20-point historical telemetry graph with optimal agronomic target envelopes.
 - Closed-loop parameter setpoint tuning and per-probe soil ADC calibration.
-- 7-channel GPIO relay matrix: Peltier (GPIO 25) interlocked to the combined fan (GPIO 27), spare (GPIO 26), grow light (GPIO 14), LED strip (GPIO 13), pump 1 (GPIO 18), pump 2 (GPIO 16).
+- 7-channel GPIO relay matrix: Peltier (GPIO 25) interlocked to the combined fan (GPIO 27), spare (GPIO 26), grow light (GPIO 14), LED strip (GPIO 32), pump 1 (GPIO 19), pump 2 (GPIO 18).
 - Dual-zone automatic watering with 8 s pulses, 60 s cooldown, and a 30 s manual hard limit.
 - Real-time event and safety diagnostics terminal log.
+- OTA firmware updates through a pastel `/update` page and Arduino IDE network upload (`biosphere.local`).
+- Sensor/WiFi self-healing with per-sensor health, manual re-check/reconnect, all-outputs-off, and restart controls.
 - Dual-target connection: Local Node simulation (`127.0.0.1:8080`) or physical ESP32 IP / `biosphere.local` over LAN.
 
 ## Brand Commitments

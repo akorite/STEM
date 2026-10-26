@@ -138,6 +138,16 @@
       7: { card: document.getElementById('relay7'), btn: document.getElementById('btnRelay7') },
     },
 
+    // Sensor health & recovery
+    healthDht: document.getElementById('healthDht'),
+    healthSoil1: document.getElementById('healthSoil1'),
+    healthSoil2: document.getElementById('healthSoil2'),
+    healthWifi: document.getElementById('healthWifi'),
+    btnHealthRecheck: document.getElementById('btnHealthRecheck'),
+    btnHealthReconnect: document.getElementById('btnHealthReconnect'),
+    btnHealthAllOff: document.getElementById('btnHealthAllOff'),
+    btnHealthRestart: document.getElementById('btnHealthRestart'),
+
     // Audit Log
     terminalLogs: document.getElementById('terminalLogs'),
     btnClearLogs: document.getElementById('btnClearLogs')
@@ -367,6 +377,8 @@
       updateRelayState(7, d.relays.pump2);
     }
 
+    renderHealth(d);
+
     // 8. Chronological Audit Log
     if (d.logs && Array.isArray(d.logs)) {
       renderAuditEntries(d.logs);
@@ -431,6 +443,65 @@
         el.mascotMouth.setAttribute('d', 'M47.5 27.5 Q50 24.5 52.5 27.5');
       }
     }
+  }
+
+  function setHealthPill(node, state, value, title) {
+    if (!node) return;
+    node.className = `health-pill ${state}`;
+    const valueNode = node.querySelector('.health-value');
+    if (valueNode) valueNode.textContent = value;
+    if (title) node.title = title;
+  }
+
+  function renderHealth(d) {
+    const h = d.health || {};
+    const dhtOk = h.dhtOk !== undefined ? h.dhtOk : !d.dhtFault;
+    const soil1Ok = h.soil1Ok !== undefined ? h.soil1Ok : !d.soil1Fault;
+    const soil2Ok = h.soil2Ok !== undefined ? h.soil2Ok : !d.soil2Fault;
+    const wifiOk = h.wifiConnected !== undefined ? h.wifiConnected : true;
+    const apFallback = h.apFallback === true;
+
+    const dhtState = dhtOk ? 'ok' : (h.dhtFails >= 3 ? 'crit' : 'warn');
+    setHealthPill(
+      el.healthDht,
+      dhtState,
+      dhtOk ? 'OK' : (h.dhtFails >= 3 ? 'FAULT' : `RETRY ${h.dhtFails || 1}`),
+      `DHT11: ${dhtOk ? 'readable' : 'fault'} • fails ${h.dhtFails || 0} • reinitialized ${h.dhtReinits || 0}×`
+    );
+
+    const soil1State = soil1Ok ? 'ok' : (h.soil1Fails >= 5 ? 'crit' : 'warn');
+    setHealthPill(
+      el.healthSoil1,
+      soil1State,
+      soil1Ok ? 'OK' : (h.soil1Fails >= 5 ? 'FAULT' : 'RETRY'),
+      `Soil 1: ${soil1Ok ? 'readable' : 'unreadable'} • fails ${h.soil1Fails || 0} • recoveries ${h.soil1Recoveries || 0}`
+    );
+
+    const soil2State = soil2Ok ? 'ok' : (h.soil2Fails >= 5 ? 'crit' : 'warn');
+    setHealthPill(
+      el.healthSoil2,
+      soil2State,
+      soil2Ok ? 'OK' : (h.soil2Fails >= 5 ? 'FAULT' : 'RETRY'),
+      `Soil 2: ${soil2Ok ? 'readable' : 'unreadable'} • fails ${h.soil2Fails || 0} • recoveries ${h.soil2Recoveries || 0}`
+    );
+
+    let wifiState = 'ok';
+    let wifiValue = 'LINK';
+    if (apFallback) {
+      wifiState = 'warn';
+      wifiValue = 'AP MODE';
+    } else if (!wifiOk) {
+      wifiState = 'crit';
+      wifiValue = 'LOST';
+    } else if (h.wifiRssi !== undefined) {
+      wifiValue = `${h.wifiRssi} dBm`;
+    }
+    setHealthPill(
+      el.healthWifi,
+      wifiState,
+      wifiValue,
+      `WiFi: ${wifiOk ? 'connected' : 'disconnected'} • ${h.wifiReconnects || 0} recoveries • heap ${Math.round((h.heap || 0) / 1024)} KB`
+    );
   }
 
   function updateRelayState(ch, isOn) {
@@ -726,6 +797,22 @@
         sendControl(`action=toggleRelay&ch=${ch}`);
       });
     }
+  }
+
+  // Sensor health & recovery controls
+  if (el.btnHealthRecheck) {
+    el.btnHealthRecheck.addEventListener('click', () => sendControl('action=reinitSensors'));
+  }
+  if (el.btnHealthReconnect) {
+    el.btnHealthReconnect.addEventListener('click', () => sendControl('action=reconnectWiFi'));
+  }
+  if (el.btnHealthAllOff) {
+    el.btnHealthAllOff.addEventListener('click', () => sendControl('action=allOff'));
+  }
+  if (el.btnHealthRestart) {
+    el.btnHealthRestart.addEventListener('click', () => {
+      if (window.confirm('Restart the ESP32 controller?')) sendControl('action=restart');
+    });
   }
 
   // Setpoint Synchronizer

@@ -28,17 +28,17 @@
 - `--shadow-active`: `0 2px 6px -1px rgba(148, 163, 184, 0.16)`
 
 ### Fresh Pastel Functional Spectrum
-- `--mint-green`: `#059669` / bg `#ecfdf5` / border `#a7f3d0` (Nominal status, active regulation, healthy growth)
-- `--sky-blue`: `#0284c7` / bg `#f0f9ff` / border `#bae6fd` (Relative humidity, pump 1 / zone A, cool mist)
-- `--honey-amber`: `#d97706` / bg `#fffbeb` / border `#fde68a` (Day progression, stomatal warnings, grow light)
-- `--sakura-rose`: `#e11d48` / bg `#fff1f2` / border `#fecdd3` (Critical alarms, emergency flush, pythium alert)
+- `--mint-green`: `#047857` / bg `#ecfdf5` / border `#a7f3d0` (Nominal status, active regulation, healthy growth)
+- `--sky-blue`: `#0369a1` / bg `#f0f9ff` / border `#bae6fd` (Relative humidity, pump 1 / zone A, cool mist)
+- `--honey-amber`: `#b45309` / bg `#fffbeb` / border `#fde68a` (Day progression, stomatal warnings, grow light)
+- `--sakura-rose`: `#be123c` / bg `#fff1f2` / border `#fecdd3` (Critical alarms, emergency flush, pythium alert)
 - `--lilac-violet`: `#7c3aed` / bg `#f5f3ff` / border `#ddd6fe` (Pump 2 / zone B, VPD metric)
 
 ### Typography & Readability (WCAG AA Compliant)
 - `--text-heading`: `#0f172a` (Deep slate heading text for maximum clarity)
 - `--text-body`: `#334155` (Crisp readable charcoal slate)
 - `--text-muted`: `#64748b` (Soft supportive text)
-- `--text-faint`: `#94a3b8` (Subtle metadata)
+- `--text-faint`: `#5b6b7f` (Subtle metadata)
 
 - **System Rounded Sans:** `-apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Quicksand", "Inter", "Segoe UI", Roboto, sans-serif`
   - System Header: 15px / 800 weight
@@ -57,3 +57,13 @@
   - **Sensory Pods (Upper):** Atmospheric thermodynamics pod + Plant companion & dual soil pod + dual-zone watering reservoirs.
   - **Recorder & Setpoints (Middle):** Pastel SVG strip-chart with soft gradients + Tactile +/- setpoint steppers.
   - **Operations & Audit (Lower):** 7-channel cute pastel relay switchboard + clean live activity log.
+
+
+## OTA Utility Surface
+
+- **Route:** `/update` (embedded in firmware, previewed by the Node simulator).
+- **Mode:** Operate. One job: choose a `.bin`, upload, reboot.
+- **World:** inherits the pastel botanical sanctuary — dotted cream-pink ground, milky cards, mint upload actions, amber safety notes, Quicksand + JetBrains Mono.
+- **Companions:** Brocco-chan gives the safety reminder; Capy guards the power cable.
+- **Instructions:** the OTA partition scheme, Export Compiled Binary path, upload sequence, failure recovery, and Arduino OTA credentials are visible before the file picker.
+- **States:** simulation notice with disabled upload, file-selected state, uploading state, pastel success page, pastel failure page with recovery link.
