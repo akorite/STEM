@@ -1673,6 +1673,57 @@ void handlePinsApi() {
     return;
   }
 
+  // ---- autodetect sensors: scan unclaimed pins, stage what is found --------------
+  // DHT = live read; soil = ADC1 level. Relays cannot be detected electrically,
+  // so only sensor roles are staged here. Skips output-pool pins already claimed
+  // by non-sensor roles so probing never pulses a wired relay.
+  if (action == "detect") {
+    const uint8_t outList[]  = PINPOOL_OUTPUT;
+    const uint8_t adc1List[] = PINPOOL_ADC1;
+    uint8_t foundDht = PIN_NONE;
+    uint8_t foundSoil[2] = { PIN_NONE, PIN_NONE };
+    uint8_t nSoil = 0;
+
+    for (uint8_t i = 0; i < sizeof(outList) && foundDht == PIN_NONE; i++) {
+      uint8_t pin = outList[i];
+      bool claimed = false;
+      for (uint8_t j = 0; j < PIN_ROLE_COUNT; j++) {
+        if (PIN_ROLES[j].kind == PIN_OUTPUT && stagedPins.*(PIN_ROLES[j].field) == pin) {
+          claimed = true; break;
+        }
+      }
+      if (claimed && pin != stagedPins.dht) continue;
+      DHT probe{pin, DHTTYPE};
+      probe.begin();
+      delay(1100);
+      if (!isnan(probe.readTemperature()) && !isnan(probe.readHumidity())) {
+        foundDht = pin;
+      }
+    }
+    for (uint8_t i = 0; i < sizeof(adc1List) && nSoil < 2; i++) {
+      uint8_t pin = adc1List[i];
+      if (pin == stagedPins.soil1 || pin == stagedPins.soil2) continue;
+      int adc = readAdcAverage(pin);
+      if (adc > 900 && adc < 4090) {
+        foundSoil[nSoil++] = pin;
+      }
+    }
+
+    stagedPins.dht   = foundDht   != PIN_NONE ? foundDht   : stagedPins.dht;
+    stagedPins.soil1 = foundSoil[0] != PIN_NONE ? foundSoil[0] : stagedPins.soil1;
+    stagedPins.soil2 = foundSoil[1] != PIN_NONE ? foundSoil[1] : stagedPins.soil2;
+
+    char msg[72];
+    snprintf(msg, sizeof(msg),
+      "PIN SETUP: detect -> dht %d, soil %d/%d",
+      foundDht, foundSoil[0], foundSoil[1]);
+    addSystemLog(msg);
+    String json = String("{\"success\":true,\"found\":{\"dht\":") + foundDht +
+                  ",\"soil1\":" + foundSoil[0] + ",\"soil2\":" + foundSoil[1] + "}}";
+    server.send(200, "application/json", json);
+    return;
+  }
+
   // ---- physical probe of ONE pin -----------------------------------------------------
   if (action == "test") {
     String kind = server.arg("kind"); // "relay" | "soil" | "dht"

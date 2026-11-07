@@ -595,6 +595,28 @@ function handlePins(url, res) {
     return json(200, { success: true });
   }
 
+  if (action === 'detect') {
+    // Physical truth in the sim: sensors live at these GPIOs no matter the map.
+    // DHT scan skips pins claimed by staged relay roles (never pulse a wired
+    // relay); soil reads all ADC1 pins. Mirrors the firmware's detect action.
+    const SIM_SENSORS = { dht: 4, soil: [34, 35] };
+    const claimedOut = new Set(
+      Object.keys(PIN_ROLES)
+        .filter((k) => PIN_ROLES[k] === 'output' && stagedPins[k] !== 255)
+        .map((k) => stagedPins[k]));
+    const found = {
+      dht: (claimedOut.has(SIM_SENSORS.dht) && stagedPins.dht !== SIM_SENSORS.dht)
+        ? 255 : SIM_SENSORS.dht,
+      soil1: SIM_SENSORS.soil[0],
+      soil2: SIM_SENSORS.soil[1]
+    };
+    if (found.dht !== 255) stagedPins.dht = found.dht;
+    stagedPins.soil1 = found.soil1;
+    stagedPins.soil2 = found.soil2;
+    log(`PIN SETUP: detect -> dht ${found.dht}, soil ${found.soil1}/${found.soil2}`);
+    return json(200, { success: true, found });
+  }
+
   if (action === 'test') {
     const kind = url.searchParams.get('kind') || 'relay';
     const pin = parseInt(url.searchParams.get('pin'), 10);
