@@ -215,6 +215,7 @@ Pin setup API — the `/setup` page and the main console's **PINS ⚙** button u
 | `set` | `role=<key>&pin=<gpio>` | Stage one role→GPIO assignment (255 = unassigned) |
 | `test` | `kind=relay\|soil\|dht&pin=<gpio>` | Probe one pin: 1.2 s relay pulse, raw ADC, or a live DHT reading |
 | `factory` | — | Stage the factory default map |
+| `detect` | — | Autodetect sensors: live DHT read across unclaimed output pins, ADC scan on ADC1 — stages what it finds |
 | `cancel` | — | Exit setup mode, discard staged changes |
 | `save` | — | Validate the staged map (no duplicate GPIOs, DHT required), write NVS, reboot |
 

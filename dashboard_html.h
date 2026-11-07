@@ -1078,6 +1078,8 @@ body{
 .btn-mint{background:var(--mint-soft);border-color:#A7F3D0;color:var(--mint-deep)}
 .btn-mint:hover{background:#A7F3D0}
 .btn-ghost{background:#fff;color:var(--sub)}
+.btn-sky{background:var(--sky-soft);border-color:#BAE6FD;color:var(--sky-deep)}
+.btn-sky:hover{background:#C4E5FD}
 .btn-test{padding:6px 8px;font-size:.75rem;border-radius:10px;background:var(--lav-soft);
   border-color:#E9D5FF;color:var(--lav-deep)}
 .btn-test:hover{background:#E9D5FF}
@@ -1240,6 +1242,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       <div class="actions" id="matrixActions" style="display:none">
         <button id="btnSave" class="btn btn-mint" type="button">Simpan &amp; Reboot</button>
         <button id="btnFactory" class="btn btn-ghost" type="button">Bawaan Pabrik</button>
+        <button id="btnDetect" class="btn btn-sky" type="button">Deteksi Sensor</button>
         <button id="btnCancel" class="btn btn-ghost" type="button">Batal</button>
         <a class="btn btn-ghost" href="/">← Dashboard</a>
       </div>
@@ -1255,7 +1258,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       <ol class="steps">
         <li><b>Masuk mode setup.</b> Otomasi diparkir, semua output OFF. Kontrol dari dashboard lain akan ditolak (409).</li>
         <li><b>Pilih GPIO per peran.</b> Pilihan terbatas pada pool yang aman: GPIO <code>6–11</code> (flash) dan pin input-only tidak pernah ditawarkan untuk output.</li>
-        <li><b>Tes satu per satu.</b> TES pada relay memicu pulsa aktif 1,2 detik; soil membaca ADC mentah; DHT membaca suhu/RH langsung dari pin itu.</li>
+        <li><b>Tes satu per satu.</b> TES pada relay memicu pulsa aktif 1,2 detik; soil membaca ADC mentah; DHT membaca suhu/RH langsung. <b>Deteksi Sensor</b> memindai pin bebas dan mengisi DHT + soil otomatis (relay tidak bisa dideteksi — tes dengan TES).</li>
         <li><b>Simpan &amp; reboot.</b> Peta divalidasi (tidak boleh ada GPIO ganda, DHT wajib terisi), ditulis ke NVS, lalu controller reboot dan berjalan otonom dengan peta baru.</li>
       </ol>
       <div class="notice notice-amber"><b>Peringatan.</b> Menutup tab tanpa Simpan/Batal membiarkan mode setup aktif sampai reboot. GPIO <code>0,2,5,12,15</code> adalah pin strapping — pastikan tidak mengganggu boot.</div>
@@ -1295,6 +1298,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
   const matrixActions = document.getElementById('matrixActions');
   const btnSave = document.getElementById('btnSave');
   const btnFactory = document.getElementById('btnFactory');
+  const btnDetect = document.getElementById('btnDetect');
   const btnCancel = document.getElementById('btnCancel');
   const saveState = document.getElementById('saveState');
   const errState = document.getElementById('errState');
@@ -1437,6 +1441,22 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
     }).catch((e) => showErr(e.message));
   });
 
+  btnDetect.addEventListener('click', () => {
+    btnDetect.disabled = true;
+    showOk('Memindai pin — DHT butuh ±30 detik di ESP32 fisik…');
+    post('detect')
+      .then((j) => getPins().then((data) => { snapshot = data; renderMatrix(); return j; }))
+      .then((j) => {
+        const f = j.found || {};
+        const dhtTxt = f.dht != null && f.dht !== PIN_NONE ? 'GPIO ' + f.dht : 'tidak terdeteksi';
+        const s1 = f.soil1 != null && f.soil1 !== PIN_NONE ? 'GPIO ' + f.soil1 : '—';
+        const s2 = f.soil2 != null && f.soil2 !== PIN_NONE ? 'GPIO ' + f.soil2 : '—';
+        showOk('Deteksi: DHT ' + dhtTxt + ' • soil ' + s1 + ' / ' + s2 +
+          '. Map disimpan bertahap (staged) — periksa lalu Simpan.');
+      })
+      .catch((e) => showErr(e.message))
+      .then(() => { btnDetect.disabled = false; });
+  });
   btnCancel.addEventListener('click', () => {
     post('cancel').then(() => {
       setupStatus.textContent = '● SETUP DIBATALKAN';
