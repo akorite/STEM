@@ -213,9 +213,10 @@ Pin setup API — the `/setup` page and the main console's **PINS ⚙** button u
 |---|---|---|
 | `enter` | — | Enter setup mode: automation parks, all outputs OFF, control API returns 409 |
 | `set` | `role=<key>&pin=<gpio>` | Stage one role→GPIO assignment (255 = unassigned) |
-| `test` | `kind=relay\|soil\|dht&pin=<gpio>` | Probe one pin: 1.2 s relay pulse, raw ADC, or a live DHT reading |
+| `test` | `kind=relay\|relayping\|soil\|dht&pin=<gpio>` | Probe one pin: 1.2 s / 0.4 s relay pulse, raw ADC, or a live DHT reading |
 | `factory` | — | Stage the factory default map |
 | `detect` | — | Autodetect sensors: live DHT read across unclaimed output pins, ADC scan on ADC1 — stages what it finds |
+| `relayscan` | `sense=<32-36>` | Loopback: sense GPIO jumpered to a channel LED (or NO+COM-GND) — sweeps the output pool, returns GPIOs that drive a relay + `wrongPolarity` flag |
 | `cancel` | — | Exit setup mode, discard staged changes |
 | `save` | — | Validate the staged map (no duplicate GPIOs, DHT required), write NVS, reboot |
 

@@ -74,5 +74,5 @@
 - **Mode:** Operate. Three jobs in sequence: enter parked-automation setup mode, assign + probe each GPIO role one by one, validate and persist the map to NVS.
 - **World:** inherits the pastel botanical sanctuary — dotted cream-pink ground, milky cards, lavender test actions, mint commit, amber safety notes, Quicksand + JetBrains Mono.
 - **Companions:** Brocco-chan warns against firing every relay at once; Capy supervises the one-at-a-time probing.
-- **Layout:** hero card (live telemetry panel) + GPIO matrix card (role, kind, active pin, staged select, TES probe button, Deteksi Sensor autodetect) + numbered instructions + factory-map / pool reference card.
+- **Layout:** hero card (live telemetry panel) + GPIO matrix card (role, kind, active pin, staged select, TES probe button, Deteksi Sensor autodetect) + Diagnostik Pin card (sensor autodetect, loopback relay scan with sense-GPIO jumper, guided per-role pin sweep with live/dead pin grid) + numbered instructions + factory-map / pool reference card.
 - **States:** idle gate (enter setup mode), active matrix with dirty/dup row highlighting and per-pin probe results, saving state, pastel success / validation-error notices, cancelled state.
