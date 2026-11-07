@@ -54,6 +54,7 @@
           <input type="text" id="targetHostInput" class="host-input" placeholder="http://127.0.0.1:8080" spellcheck="false" title="Target REST API address" aria-label="Target REST API Host">
           <button class="host-connect-btn" id="btnConnectTarget" type="button">LINK ⚡</button>
           <button class="host-connect-btn" id="btnOta" type="button" style="display:none" title="Open the ESP32 OTA firmware uploader">OTA ⬆</button>
+          <button class="host-connect-btn" id="btnSetup" type="button" style="display:none" title="Open the GPIO pin setup wizard on the target device">PINS ⚙</button>
         </div>
 
         <!-- System Clocks & Diagnostics -->
@@ -517,7 +518,7 @@
             <div class="switch-unit" id="relay1">
               <div class="switch-icon-wrap icon-peltier">❄️</div>
               <div class="switch-meta">
-                <span class="unit-code">4CH IN1 • GPIO 25</span>
+                <span class="unit-code">4CH IN1 • <span id="pinGpio1">GPIO 25</span></span>
                 <span class="unit-title">Peltier 12V</span>
               </div>
               <button class="rocker-switch" data-ch="1" id="btnRelay1" type="button" aria-pressed="false" aria-label="Toggle Peltier Cooler">
@@ -529,7 +530,7 @@
             <div class="switch-unit" id="relay2">
               <div class="switch-icon-wrap icon-fan">🌀</div>
               <div class="switch-meta">
-                <span class="unit-code">4CH IN2 + 2CH IN2<br>GPIO 27</span>
+                <span class="unit-code">4CH IN2 + 2CH IN2<br><span id="pinGpio2">GPIO 27</span></span>
                 <span class="unit-title">Fan Gabungan</span>
               </div>
               <button class="rocker-switch" data-ch="2" id="btnRelay2" type="button" aria-pressed="false" aria-label="Toggle Combined Fan">
@@ -541,7 +542,7 @@
             <div class="switch-unit" id="relay3">
               <div class="switch-icon-wrap icon-blower">🔌</div>
               <div class="switch-meta">
-                <span class="unit-code">4CH IN3 • GPIO 26</span>
+                <span class="unit-code">4CH IN3 • <span id="pinGpio3">GPIO 26</span></span>
                 <span class="unit-title">Spare Actuator</span>
               </div>
               <button class="rocker-switch" data-ch="3" id="btnRelay3" type="button" aria-pressed="false" aria-label="Toggle Spare Relay">
@@ -553,7 +554,7 @@
             <div class="switch-unit" id="relay4">
               <div class="switch-icon-wrap icon-light">💡</div>
               <div class="switch-meta">
-                <span class="unit-code">4CH IN4 • GPIO 14</span>
+                <span class="unit-code">4CH IN4 • <span id="pinGpio4">GPIO 14</span></span>
                 <span class="unit-title">HPL Grow Light</span>
               </div>
               <button class="rocker-switch" data-ch="4" id="btnRelay4" type="button" aria-pressed="false" aria-label="Toggle Grow Light">
@@ -565,7 +566,7 @@
             <div class="switch-unit" id="relay5">
               <div class="switch-icon-wrap icon-light">🌈</div>
               <div class="switch-meta">
-                <span class="unit-code">2CH IN1 • GPIO 32</span>
+                <span class="unit-code">2CH IN1 • <span id="pinGpio5">GPIO 32</span></span>
                 <span class="unit-title">LED Strip</span>
               </div>
               <button class="rocker-switch" data-ch="5" id="btnRelay5" type="button" aria-pressed="false" aria-label="Toggle LED Strip">
@@ -577,7 +578,7 @@
             <div class="switch-unit" id="relay6">
               <div class="switch-icon-wrap icon-spray1">💧</div>
               <div class="switch-meta">
-                <span class="unit-code">2CH IN2 • GPIO 19</span>
+                <span class="unit-code">2CH IN2 • <span id="pinGpio6">GPIO 19</span></span>
                 <span class="unit-title">DC Pump 1 • Zone A</span>
               </div>
               <button class="rocker-switch" data-ch="6" id="btnRelay6" type="button" aria-pressed="false" aria-label="Toggle Pump 1">
@@ -589,7 +590,7 @@
             <div class="switch-unit" id="relay7">
               <div class="switch-icon-wrap icon-spray2">🚿</div>
               <div class="switch-meta">
-                <span class="unit-code">2CH IN1 • GPIO 18</span>
+                <span class="unit-code">2CH IN1 • <span id="pinGpio7">GPIO 18</span></span>
                 <span class="unit-title">DC Pump 2 • Zone B</span>
               </div>
               <button class="rocker-switch" data-ch="7" id="btnRelay7" type="button" aria-pressed="false" aria-label="Toggle Pump 2">

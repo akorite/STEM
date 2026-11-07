@@ -63,6 +63,7 @@ body{
   border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid var(--pink)}
 .pals{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin:6px 0 0;z-index:1}
 .pal{display:flex;flex-direction:column;align-items:center;gap:3px}
+.hero{grid-row:span 2;justify-content:space-between;gap:14px;padding-bottom:24px}
 .pal span{font-size:.7rem;font-weight:800;color:var(--sub);background:#fff;border:1px solid var(--line);
   border-radius:var(--pill);padding:1px 8px;box-shadow:0 2px 6px rgba(244,63,94,.06)}
 .brocco-art{width:170px;height:190px;animation:bob 3.4s ease-in-out infinite;transform-origin:bottom center}
@@ -193,7 +194,7 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
         <span class="badge badge-mint">.bin</span>
       </div>
       <div id="simNotice" class="notice notice-amber" style="display:none">
-        Mode simulasi: OTA hanya tersedia di ESP32 fisik. Hubungkan ke IP ESP32 / biosphere.local.
+        Mode simulasi: file <code>.bin</code> disimpan ke folder <code>uploads/</code> — flash &amp; reboot hanya terjadi di ESP32 fisik.
       </div>
       <form id="otaForm" method="POST" action="/update" enctype="multipart/form-data">
         <label class="dropzone" for="fw">
@@ -275,11 +276,10 @@ footer{text-align:center;color:var(--mut);font-size:.74rem;font-weight:600;margi
   fetch('/api/telemetry', { cache: 'no-store' })
     .then((response) => response.json())
     .then((data) => {
-      const hardware = !!(data && data.ota && data.ota.web);
+      const hardware = !!(data && data.ota && data.ota.arduino);
       if (!hardware) {
         simNotice.style.display = 'block';
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Hardware only';
+        submitBtn.textContent = 'Upload (simulasi)';
         document.getElementById('otaStatus').textContent = 'SIMULASI';
         document.getElementById('otaStatus').className = 'badge badge-lav';
       }

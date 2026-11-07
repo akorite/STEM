@@ -49,6 +49,7 @@
     targetHostInput: document.getElementById('targetHostInput'),
     btnConnectTarget: document.getElementById('btnConnectTarget'),
     btnOta: document.getElementById('btnOta'),
+    btnSetup: document.getElementById('btnSetup'),
     ipDisplay: document.getElementById('ipDisplay'),
     uptimeDisplay: document.getElementById('uptimeDisplay'),
 
@@ -138,6 +139,17 @@
       7: { card: document.getElementById('relay7'), btn: document.getElementById('btnRelay7') },
     },
 
+
+    // Live GPIO labels on relay cards (populated from telemetry pins)
+    pinGpios: {
+      1: document.getElementById('pinGpio1'),
+      2: document.getElementById('pinGpio2'),
+      3: document.getElementById('pinGpio3'),
+      4: document.getElementById('pinGpio4'),
+      5: document.getElementById('pinGpio5'),
+      6: document.getElementById('pinGpio6'),
+      7: document.getElementById('pinGpio7'),
+    },
     // Sensor health & recovery
     healthDht: document.getElementById('healthDht'),
     healthSoil1: document.getElementById('healthSoil1'),
@@ -205,10 +217,14 @@
   function renderDashboard(d) {
     // 1. System Navigation
     const status = d.status || 'OPTIMAL';
+    const setupMode = !!(d.pins && d.pins.setupMode);
     let statusText = 'NOMINAL ✨';
     let statusClass = 'status-nominal';
 
-    if (status === 'KRITIS') {
+    if (setupMode) {
+      statusText = 'PIN SETUP 🔧';
+      statusClass = 'status-waspada';
+    } else if (status === 'KRITIS') {
       statusText = 'KRITIS 🚨';
       statusClass = 'status-kritis';
     } else if (status === 'WASPADA') {
@@ -231,6 +247,21 @@
     el.uptimeDisplay.textContent = d.uptime || '00:00:00';
     if (el.btnOta) {
       el.btnOta.style.display = (d.ota && d.ota.web) ? 'inline-block' : 'none';
+    }
+    if (el.btnSetup) {
+      el.btnSetup.style.display = d.pins ? 'inline-block' : 'none';
+    }
+
+    // Live GPIO labels on the relay switchboard — driven by the active pin map.
+    if (d.pins) {
+      const relayPinRoles = { 1: 'peltier', 2: 'fan', 3: 'spare', 4: 'growLight', 5: 'ledStrip', 6: 'pump1', 7: 'pump2' };
+      for (const ch of Object.keys(relayPinRoles)) {
+        const node = el.pinGpios && el.pinGpios[ch];
+        const pin = d.pins[relayPinRoles[ch]];
+        if (node && pin !== undefined) {
+          node.textContent = pin === 255 ? 'UNASSIGNED' : `GPIO ${pin}`;
+        }
+      }
     }
 
     // 2. Atmospheric Thermodynamics Station
@@ -749,6 +780,12 @@
   if (el.btnOta) {
     el.btnOta.addEventListener('click', () => {
       window.open(`${apiBase}/update`, '_blank', 'noopener');
+    });
+  }
+
+  if (el.btnSetup) {
+    el.btnSetup.addEventListener('click', () => {
+      window.open(`${apiBase}/setup`, '_blank', 'noopener');
     });
   }
 
