@@ -595,6 +595,25 @@ function handlePins(url, res) {
     return json(200, { success: true });
   }
 
+  if (action === 'relayscan') {
+    const sense = parseInt(url.searchParams.get('sense'), 10);
+    if (![32, 33, 34, 35, 36].includes(sense)) {
+      return json(400, { error: 'sense must be one of 32-36' });
+    }
+    // Phantom wiring: these GPIOs actually reach the relay boards in the sim.
+    // Mirrors firmware behaviour — sensor-claimed and sense pins are skipped,
+    // hits are the GPIOs that would light a channel LED.
+    const SIM_PHYS_RELAYS = [25, 27, 26, 14, 32, 19, 18, 2];
+    const claimedSensors = new Set(
+      Object.keys(PIN_ROLES)
+        .filter((k) => PIN_ROLES[k] !== 'output' && stagedPins[k] !== 255)
+        .map((k) => stagedPins[k]));
+    const hits = PINPOOL_OUTPUT.filter((p) =>
+      SIM_PHYS_RELAYS.includes(p) && p !== sense && !claimedSensors.has(p));
+    log(`PIN SETUP: relayscan sense=${sense} hits=${hits.length}`);
+    return json(200, { success: true, sense, hits, wrongPolarity: false });
+  }
+
   if (action === 'detect') {
     // Physical truth in the sim: sensors live at these GPIOs no matter the map.
     // DHT scan skips pins claimed by staged relay roles (never pulse a wired
@@ -630,6 +649,10 @@ function handlePins(url, res) {
     }
     if (kind === 'dht') {
       return json(200, { success: true, kind: 'dht', pin, ok: true, temp: 21.4, rh: 62.0 });
+    }
+    if (kind === 'relayping') {
+      log(`PIN SETUP: sweep ping GPIO ${pin}`);
+      return json(200, { success: true, kind: 'relayping', pin });
     }
     log(`PIN SETUP: pulsing GPIO ${pin}`);
     stopSimPinTest();

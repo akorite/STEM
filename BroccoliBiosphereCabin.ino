@@ -1701,11 +1701,9 @@ void handlePinsApi() {
       }
     }
     for (uint8_t i = 0; i < sizeof(adc1List) && nSoil < 2; i++) {
-      uint8_t pin = adc1List[i];
-      if (pin == stagedPins.soil1 || pin == stagedPins.soil2) continue;
-      int adc = readAdcAverage(pin);
+      int adc = readAdcAverage(adc1List[i]);
       if (adc > 900 && adc < 4090) {
-        foundSoil[nSoil++] = pin;
+        foundSoil[nSoil++] = adc1List[i];
       }
     }
 
@@ -1723,6 +1721,70 @@ void handlePinsApi() {
     server.send(200, "application/json", json);
     return;
   }
+  // ---- relay loopback scan: sense a channel LED to find live relay pins ------------
+  // Wiring: one relay channel's LED (or NO contact with COM to GND) jumpered to a
+  // free sense GPIO + GND. Any channel on the board works — only one is needed to
+  // prove which GPIOs actually reach the board. Polarity is auto-sniffed.
+  if (action == "relayscan") {
+    int sense = server.arg("sense").toInt();
+    const uint8_t sensePins[] = {32, 33, 34, 35, 36}; // input-capable, pullup OK (36=VP)
+    bool ok = false;
+    for (uint8_t i = 0; i < sizeof(sensePins); i++) {
+      if (sensePins[i] == (uint8_t)sense) { ok = true; break; }
+    }
+    if (!ok) {
+      server.send(400, "application/json", "{\"error\":\"sense must be one of 32-36\"}");
+      return;
+    }
+    pinMode((uint8_t)sense, INPUT_PULLUP);
+    const uint8_t outList[] = PINPOOL_OUTPUT;
+
+    // Each pin is tried at both levels: RELAY_ON first, then the opposite. That
+    // finds the relay even when the compiled RELAY_ACTIVE_LOW guess is wrong,
+    // and reports which level actually fired — no separate polarity sniff.
+    stopPinTest();
+    String hits = "";
+    uint8_t nHits = 0;
+    bool wrongPolarity = false;
+    for (uint8_t i = 0; i < sizeof(outList); i++) {
+      uint8_t pin = outList[i];
+      bool claimed = false;
+      for (uint8_t j = 0; j < PIN_ROLE_COUNT; j++) {
+        if (PIN_ROLES[j].kind != PIN_OUTPUT &&
+            stagedPins.*(PIN_ROLES[j].field) == pin) { claimed = true; break; }
+      }
+      if (claimed || pin == (uint8_t)sense) continue;
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, RELAY_OFF);
+      delay(10);
+      bool hit = false;
+      int8_t level = -1;
+      digitalWrite(pin, RELAY_ON); delay(300);
+      if (digitalRead((uint8_t)sense) == LOW) { hit = true; level = RELAY_ON; }
+      if (!hit) {
+        digitalWrite(pin, RELAY_OFF); delay(20);
+        digitalWrite(pin, (RELAY_ON == LOW) ? HIGH : LOW); delay(300);
+        if (digitalRead((uint8_t)sense) == LOW) { hit = true; level = !RELAY_ON; }
+      }
+      if (hit) {
+        if (nHits) hits += ",";
+        hits += String(pin);
+        nHits++;
+        if (level != RELAY_ON) wrongPolarity = true;
+      }
+      digitalWrite(pin, RELAY_OFF);
+      pinMode(pin, INPUT);
+    }
+    char msg[80];
+    snprintf(msg, sizeof(msg), "PIN SETUP: relayscan sense=%d hits=%d", sense, nHits);
+    addSystemLog(msg);
+    String json = String("{\"success\":true,\"sense\":") + sense +
+                  ",\"hits\":[" + hits + "]" +
+                  ",\"wrongPolarity\":" + (wrongPolarity ? "true" : "false") + "}";
+    server.send(200, "application/json", json);
+    return;
+  }
+
 
   // ---- physical probe of ONE pin -----------------------------------------------------
   if (action == "test") {
@@ -1762,11 +1824,24 @@ void handlePinsApi() {
       return;
     }
 
+    if (kind == "relayping") {
+      // Short pulse for the diagnostic sweep — long enough to see a channel LED.
+      digitalWrite((uint8_t)pin, RELAY_OFF);
+      pinMode((uint8_t)pin, OUTPUT);
+      digitalWrite((uint8_t)pin, RELAY_ON);
+      state.pinTestPin = (uint8_t)pin;
+      state.pinTestUntil = millis() + 400UL;
+      String json = "{\"success\":true,\"kind\":\"relayping\",\"pin\":" + String(pin) + "}";
+      server.send(200, "application/json", json);
+      return;
+    }
+
     // Default: relay pulse — pin driven active for 1.2 s then released.
     digitalWrite((uint8_t)pin, RELAY_OFF);
     pinMode((uint8_t)pin, OUTPUT);
     digitalWrite((uint8_t)pin, RELAY_ON);
     state.pinTestPin = (uint8_t)pin;
+
     state.pinTestUntil = millis() + 1200UL;
     char msg[64];
     snprintf(msg, sizeof(msg), "PIN SETUP: pulsing GPIO %d", pin);

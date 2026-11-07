@@ -127,6 +127,26 @@ body{
 .prole b{font-size:.82rem}
 .prole small{font-size:.75rem;color:var(--sub);font-weight:600}
 .prole .presult{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--sky-deep);font-weight:700}
+.diag-card{background:linear-gradient(180deg,#fff,#F7FBFF)}
+.dgh{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--sub);margin:12px 0 6px}
+.dgh:first-of-type{margin-top:4px}
+.dgrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}
+.dginfo{font-size:.75rem;color:var(--sub);font-weight:600;flex:1;min-width:200px}
+.pingrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:5px;margin-top:8px}
+.pincell{border-radius:9px;padding:5px 2px;text-align:center;font-family:'JetBrains Mono',monospace;
+  font-size:.68rem;font-weight:700;border:1.5px solid var(--line-soft);background:var(--card-soft);
+  color:var(--mut);cursor:default;transition:transform .12s}
+.pincell.pc-pulse{background:var(--sky-soft);border-color:#BAE6FD;color:var(--sky-deep);transform:scale(1.08)}
+.pincell.pc-live{background:var(--mint-soft);border-color:#A7F3D0;color:var(--mint-deep);cursor:pointer}
+.pincell.pc-dead{background:#FFF7F8;border-color:#FECDD3;color:var(--pink-deep)}
+.pincell.pc-skip{opacity:.45}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap}
+.pc-chip{border-radius:var(--pill);padding:5px 12px;font-family:'JetBrains Mono',monospace;
+  font-size:.75rem;font-weight:700;border:1.5px solid #BAE6FD;background:var(--sky-soft);
+  color:var(--sky-deep);cursor:pointer}
+.pc-chip:hover{background:#C4E5FD}
+.pc-chip.none{border-color:#FECDD3;background:var(--pink-soft);color:var(--pink-deep)}
 .steps{list-style:none;counter-reset:pin;display:flex;flex-direction:column;gap:9px;margin-top:4px}
 .steps li{position:relative;padding-left:34px;font-size:.78rem;color:var(--sub);font-weight:600;line-height:1.5}
 .steps li::before{counter-increment:pin;content:counter(pin);position:absolute;left:0;top:0;
@@ -231,7 +251,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
         <span class="badge badge-lav">ESP32 Dev Module</span>
         <span class="badge badge-sky" id="fwBadge">firmware</span>
       </div>
-      <p class="muted">Selama setup, otomasi iklim &amp; irigasi diparkir dan semua output dimatikan. Relay hanya menyala lewat tombol TES — satu per satu.</p>
+      <p class="muted">Selama setup, otomasi iklim &amp; irigasi diparkir dan semua output dimatikan. Relay hanya menyala lewat tombol TES, satu per satu.</p>
     </section>
 
     <section class="card matrix-card" aria-labelledby="matrixTitle">
@@ -260,15 +280,49 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       <div id="okState" class="notice notice-mint" style="display:none"></div>
     </section>
 
+    <section class="card diag-card" id="diagCard" style="display:none" aria-labelledby="diagTitle">
+      <div class="card-head">
+        <h2 id="diagTitle">🩺 Diagnostik Pin</h2>
+        <span class="badge badge-sky">otomatis</span>
+      </div>
+
+      <div class="dgh">1 · Sensor</div>
+      <div class="dgrow">
+        <button id="btnDetect2" class="btn btn-sky" type="button">Deteksi Sensor</button>
+        <span class="dginfo">DHT dibaca hidup dari pin bebas; soil dari level ADC1. Berjalan otomatis saat masuk setup.</span>
+      </div>
+      <div id="detectInfo" class="dginfo">—</div>
+
+      <div class="dgh">2 · Loopback relay (opsional, 1 jumper)</div>
+      <div class="dginfo">Jumper GPIO sense + GND ke <b>LED salah satu kanal relay</b> (atau ke NO salah satu kanal, dengan COM ke GND). Semua kanal board itu terdeteksi sekaligus, tanpa menebak.</div>
+      <div class="dgrow">
+        <select id="senseSel" class="pin-select" style="width:120px"></select>
+        <button id="btnLoop" class="btn btn-sky" type="button">Scan Loopback</button>
+        <span id="loopInfo" class="dginfo">GPIO yang benar-benar menyalakan relay akan muncul di sini.</span>
+      </div>
+
+      <div class="dgh">3 · Peta relay terpandu</div>
+      <div class="dgrow">
+        <select id="roleSel" class="pin-select" style="width:160px"></select>
+        <button id="btnRoleScan" class="btn btn-mint" type="button">Cari Pin untuk Peran Ini</button>
+        <button id="btnStop" class="btn btn-ghost" type="button" style="display:none">Stop</button>
+        <button id="btnScanAll" class="btn btn-sky" type="button">Scan Semua Pin</button>
+      </div>
+      <div id="scanPrompt" class="dginfo"></div>
+      <div id="answerRow" class="chiprow" style="display:none"></div>
+      <div class="dginfo" style="margin-top:6px">Board pin hidup: klik "Scan Semua" untuk menyapu setiap GPIO, klik sel untuk membalik status hidup/mati:</div>
+      <div class="pingrid" id="pinGrid"></div>
+    </section>
+
     <section class="card instructions" aria-labelledby="instructionsTitle">
       <h2 id="instructionsTitle">📋 Cara Pakai</h2>
       <ol class="steps">
         <li><b>Masuk mode setup.</b> Otomasi diparkir, semua output OFF. Kontrol dari dashboard lain akan ditolak (409).</li>
         <li><b>Pilih GPIO per peran.</b> Pilihan terbatas pada pool yang aman: GPIO <code>6–11</code> (flash) dan pin input-only tidak pernah ditawarkan untuk output.</li>
-        <li><b>Tes satu per satu.</b> TES pada relay memicu pulsa aktif 1,2 detik; soil membaca ADC mentah; DHT membaca suhu/RH langsung. <b>Deteksi Sensor</b> memindai pin bebas dan mengisi DHT + soil otomatis (relay tidak bisa dideteksi — tes dengan TES).</li>
+        <li><b>Tes satu per satu.</b> TES pada relay memicu pulsa aktif 1,2 detik; soil membaca ADC mentah; DHT membaca suhu/RH langsung. <b>Deteksi Sensor</b> memindai pin bebas dan mengisi DHT + soil otomatis (relay tidak bisa dideteksi; tes dengan TES).</li>
         <li><b>Simpan &amp; reboot.</b> Peta divalidasi (tidak boleh ada GPIO ganda, DHT wajib terisi), ditulis ke NVS, lalu controller reboot dan berjalan otonom dengan peta baru.</li>
       </ol>
-      <div class="notice notice-amber"><b>Peringatan.</b> Menutup tab tanpa Simpan/Batal membiarkan mode setup aktif sampai reboot. GPIO <code>0,2,5,12,15</code> adalah pin strapping — pastikan tidak mengganggu boot.</div>
+      <div class="notice notice-amber"><b>Peringatan.</b> Menutup tab tanpa Simpan/Batal membiarkan mode setup aktif sampai reboot. GPIO <code>0,2,5,12,15</code> adalah pin strapping; pastikan tidak mengganggu boot.</div>
     </section>
 
     <section class="card details" aria-labelledby="detailsTitle">
@@ -277,7 +331,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       <div class="kv"><span>Soil ADC1 (input-only OK)</span><b>32–36,39</b></div>
       <div class="kv"><span>DHT11</span><b>pin output atau input-only mana pun</b></div>
       <div class="kv"><span>Dilarang</span><b>GPIO 6–11 (flash), pin tak dikenal</b></div>
-      <div class="kv"><span>Default fan</span><b>GPIO 27 — dua relay di-Y-splice ke GPIO yang sama</b></div>
+      <div class="kv"><span>Default fan</span><b>GPIO 27: dua relay di-Y-splice ke GPIO yang sama</b></div>
       <p class="muted" style="font-size:.8rem;color:var(--sub);margin-top:10px;font-weight:600">Nilai <code>—</code> berarti peran dinonaktifkan (255). DHT wajib terisi karena safe-mode bergantung padanya.</p>
     </section>
   </main>
@@ -396,7 +450,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       row.classList.toggle('dup', sel && sel.value !== '255' && seen[sel.value] > 1);
     });
     if (Object.values(seen).some((n) => n > 1)) {
-      showErr('Ada GPIO yang dipakai dua peran — perbaiki sebelum Simpan.');
+      showErr('Ada GPIO yang dipakai dua peran; perbaiki sebelum Simpan.');
     } else {
       clearNotices();
     }
@@ -438,6 +492,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
         pinMatrix.style.display = 'flex';
         matrixActions.style.display = 'flex';
         renderMatrix();
+        openDiagnostics();
       })
       .catch((e) => { btnEnter.disabled = false; showErr(e.message); });
   });
@@ -448,28 +503,14 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
     }).catch((e) => showErr(e.message));
   });
 
-  btnDetect.addEventListener('click', () => {
-    btnDetect.disabled = true;
-    showOk('Memindai pin — DHT butuh ±30 detik di ESP32 fisik…');
-    post('detect')
-      .then((j) => getPins().then((data) => { snapshot = data; renderMatrix(); return j; }))
-      .then((j) => {
-        const f = j.found || {};
-        const dhtTxt = f.dht != null && f.dht !== PIN_NONE ? 'GPIO ' + f.dht : 'tidak terdeteksi';
-        const s1 = f.soil1 != null && f.soil1 !== PIN_NONE ? 'GPIO ' + f.soil1 : '—';
-        const s2 = f.soil2 != null && f.soil2 !== PIN_NONE ? 'GPIO ' + f.soil2 : '—';
-        showOk('Deteksi: DHT ' + dhtTxt + ' • soil ' + s1 + ' / ' + s2 +
-          '. Map disimpan bertahap (staged) — periksa lalu Simpan.');
-      })
-      .catch((e) => showErr(e.message))
-      .then(() => { btnDetect.disabled = false; });
-  });
+  btnDetect.addEventListener('click', () => runDetect(false));
   btnCancel.addEventListener('click', () => {
     post('cancel').then(() => {
       setupStatus.textContent = '● SETUP DIBATALKAN';
       setupStatus.className = 'badge badge-sky';
       pinMatrix.style.display = 'none';
       matrixActions.style.display = 'none';
+      diagCard.style.display = 'none';
       enterGate.style.display = 'block';
       enterRow.style.display = 'flex';
       btnEnter.disabled = false;
@@ -484,8 +525,8 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       .then((j) => {
         saveState.style.display = 'none';
         showOk(j.rebooting === false
-          ? 'Tersimpan (simulasi — tanpa reboot).'
-          : 'Peta tersimpan ke NVS. Controller rebooting — tunggu ±10 detik lalu muat ulang.');
+          ? 'Tersimpan (simulasi, tanpa reboot).'
+          : 'Peta tersimpan ke NVS. Controller rebooting; tunggu ±10 detik lalu muat ulang.');
         pinMatrix.style.display = 'none';
         matrixActions.style.display = 'none';
         setupStatus.textContent = '● TERSIMPAN';
@@ -493,6 +534,185 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       })
       .catch((e) => { saveState.style.display = 'none'; btnSave.disabled = false; showErr(e.message); });
   });
+
+  // ---- Diagnostik Pin ------------------------------------------------------------
+  const diagCard = document.getElementById('diagCard');
+  const btnDetect2 = document.getElementById('btnDetect2');
+  const detectInfo = document.getElementById('detectInfo');
+  const senseSel = document.getElementById('senseSel');
+  const btnLoop = document.getElementById('btnLoop');
+  const loopInfo = document.getElementById('loopInfo');
+  const roleSel = document.getElementById('roleSel');
+  const btnRoleScan = document.getElementById('btnRoleScan');
+  const btnScanAll = document.getElementById('btnScanAll');
+  const btnStop = document.getElementById('btnStop');
+  const scanPrompt = document.getElementById('scanPrompt');
+  const answerRow = document.getElementById('answerRow');
+  const pinGrid = document.getElementById('pinGrid');
+
+  let markedPins = new Set();    // pins the user saw respond ("live")
+  let sweepStop = false;
+  let answering = null;          // {role} while a role sweep waits for the click
+
+  const RELAY_ROLES = ['peltier','fan','spare','growLight','ledStrip','pump1','pump2','statusLed'];
+  const SENSOR_PINS_OF = () => new Set([snapshot.staged.soil1, snapshot.staged.soil2,
+                                      snapshot.staged.dht].filter(p => p !== PIN_NONE));
+
+  function buildPinGrid() {
+    pinGrid.innerHTML = '';
+    snapshot.pool.output.forEach((p) => {
+      const c = document.createElement('div');
+      c.className = 'pincell'; c.id = 'pc-' + p; c.dataset.pin = p;
+      c.textContent = p;
+      c.addEventListener('click', () => {
+        if (answering) { answerRoleScan(p); return; }
+        if (markedPins.has(p)) { markedPins.delete(p); setCell(p, 'pc-dead', p + ' ✗'); }
+        else if (cellFor(p).classList.contains('pc-dead')) setCell(p, '', String(p));
+        else { markedPins.add(p); setCell(p, 'pc-live', p + ' ✓'); }
+      });
+      pinGrid.appendChild(c);
+    });
+  }
+  function cellFor(p) { return document.getElementById('pc-' + p); }
+  function setCell(p, cls, txt) {
+    const c = cellFor(p); if (!c) return;
+    c.className = 'pincell' + (cls ? ' ' + cls : ''); c.textContent = txt;
+  }
+  function claimedByRole(p, exceptRole) {
+    return RELAY_ROLES.some((r) => r !== exceptRole && snapshot.staged[r] === p);
+  }
+
+  // Sequential short-pulse sweep. 'health' sweeps the pool for a live/dead board;
+  // 'role' sweeps candidates then waits for the user to click the pin that fired.
+  async function sweepPins(mode, role) {
+    const sensors = SENSOR_PINS_OF();
+    const cands = mode === 'role'
+      ? snapshot.pool.output.filter((p) => !sensors.has(p) && !claimedByRole(p, role))
+      : snapshot.pool.output.filter((p) => !sensors.has(p));
+    sweepStop = false;
+    btnStop.style.display = '';
+    btnRoleScan.disabled = true; btnScanAll.disabled = true;
+    scanPrompt.textContent = 'Menyapu… klik sel yang menyalakan beban saat berdenyut.';
+
+    for (const p of cands) {
+      if (sweepStop) break;
+      setCell(p, 'pc-pulse', p + ' …');
+      try { await post('test', { kind: 'relayping', pin: p }); } catch (e) {}
+      await new Promise((r) => setTimeout(r, 520));
+      if (sweepStop) break;
+      const c = cellFor(p);
+      if (c && c.classList.contains('pc-pulse')) {
+        if (markedPins.has(p)) setCell(p, 'pc-live', p + ' ✓');
+        else setCell(p, 'pc-dead', p + ' ✗');
+      }
+    }
+
+    btnStop.style.display = 'none';
+    btnRoleScan.disabled = false; btnScanAll.disabled = false;
+    if (sweepStop) { scanPrompt.textContent = 'Scan dihentikan.'; return; }
+
+    if (mode === 'role') {
+      answerRow.innerHTML = '';
+      const seen = cands.filter((p) => markedPins.has(p));
+      const pick = seen.length ? seen : cands;
+      scanPrompt.textContent = 'Pin mana yang menyalakan ' + (LABELS[role] || role) + '? Klik satu (atau di grid):';
+      pick.forEach((p) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'pc-chip'; b.textContent = 'GPIO ' + p;
+        b.addEventListener('click', () => answerRoleScan(p));
+        answerRow.appendChild(b);
+      });
+      const none = document.createElement('button');
+      none.type = 'button'; none.className = 'pc-chip none'; none.textContent = 'tidak ada yang nyala';
+      none.addEventListener('click', () => answerRoleScan(PIN_NONE));
+      answerRow.appendChild(none);
+      answerRow.style.display = 'flex';
+      answering = { role: role };
+    } else {
+      scanPrompt.textContent = 'Scan selesai: ' + markedPins.size + ' pin ditandai hidup (✓). Pilih peran lalu "Cari Pin".';
+    }
+  }
+
+  function answerRoleScan(pin) {
+    const role = answering && answering.role;
+    answering = null;
+    answerRow.style.display = 'none';
+    if (!role) return;
+    if (pin === PIN_NONE) {
+      scanPrompt.textContent = (LABELS[role] || role) + ': tidak ada pin yang merespons. Cek kabel IN/VCC/GND board relay, lalu coba lagi.';
+      return;
+    }
+    post('set', { role: role, pin: pin })
+      .then(() => getPins()).then((data) => { snapshot = data; renderMatrix(); })
+      .then(() => {
+        scanPrompt.textContent = (LABELS[role] || role) + ' → GPIO ' + pin + ' terpasang (staged). Pilih peran berikutnya.';
+      })
+      .catch((e) => { scanPrompt.textContent = 'Gagal: ' + e.message; });
+  }
+
+  btnStop.addEventListener('click', () => { sweepStop = true; });
+  btnScanAll.addEventListener('click', () => { if (!btnScanAll.disabled) sweepPins('health'); });
+  btnRoleScan.addEventListener('click', () => {
+    const role = roleSel.value;
+    if (!role) return;
+    answerRow.style.display = 'none'; answering = null;
+    scanPrompt.textContent = 'Perhatikan ' + (LABELS[role] || role) + '; sapuan mulai…';
+    setTimeout(() => sweepPins('role', role), 800);
+  });
+
+  btnLoop.addEventListener('click', () => {
+    const sense = parseInt(senseSel.value, 10);
+    btnLoop.disabled = true;
+    loopInfo.textContent = 'Menyapu output pool lewat LED kanal… ±20 dtk.';
+    post('relayscan', { sense: sense })
+      .then((j) => {
+        const hits = j.hits || [];
+        hits.forEach((p) => { markedPins.add(p); setCell(p, 'pc-live', p + ' ✓'); });
+        loopInfo.innerHTML = hits.length
+          ? 'Relay hidup di GPIO: <b>' + hits.join(', ') + '</b>' +
+            (j.wrongPolarity ? '; ⚠ level aktif terbalik (RELAY_ACTIVE_LOW salah)' : '') +
+            '.'
+          : 'Tidak ada respons — cek jumper sense→LED kanal, GND, dan VCC board relay.';
+      })
+      .catch((e) => { loopInfo.textContent = 'Gagal: ' + e.message; })
+      .then(() => { btnLoop.disabled = false; });
+  });
+
+  function runDetect(auto) {
+    btnDetect2.disabled = true;
+    detectInfo.textContent = auto ? 'Autodetect berjalan…' : 'Memindai pin — DHT butuh ±30 dtk di ESP32 fisik…';
+    post('detect')
+      .then((j) => getPins().then((data) => { snapshot = data; renderMatrix(); return j; }))
+      .then((j) => {
+        const f = j.found || {};
+        const gp = (v) => (v != null && v !== PIN_NONE) ? 'GPIO ' + v : '—';
+        detectInfo.innerHTML = 'DHT <b>' + gp(f.dht) + '</b> • soil1 <b>' + gp(f.soil1) +
+          '</b> • soil2 <b>' + gp(f.soil2) + '</b> — staged, periksa lalu Simpan.';
+        showOk('Deteksi: DHT ' + gp(f.dht) + ' • soil ' + gp(f.soil1) + ' / ' + gp(f.soil2) + '.');
+      })
+      .catch((e) => { detectInfo.textContent = 'Gagal: ' + e.message; showErr(e.message); })
+      .then(() => { btnDetect2.disabled = false; });
+  }
+  btnDetect2.addEventListener('click', () => runDetect(false));
+
+  function openDiagnostics() {
+    diagCard.style.display = 'block';
+    roleSel.innerHTML = '';
+    RELAY_ROLES.forEach((r) => {
+      const o = document.createElement('option');
+      o.value = r; o.textContent = LABELS[r] || r;
+      roleSel.appendChild(o);
+    });
+    senseSel.innerHTML = '';
+    const claimed = SENSOR_PINS_OF();
+    [32, 33, 34, 35, 36].forEach((p) => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = 'GPIO ' + p + (claimed.has(p) ? ' (dipakai)' : '');
+      senseSel.appendChild(o);
+    });
+    buildPinGrid();
+    runDetect(true);
+  }
 
   // If the device is already in setup mode (or simulation), open the matrix directly.
   getPins().then((data) => {
@@ -505,6 +725,7 @@ footer{text-align:center;color:var(--mut);font-size:.75rem;font-weight:600;margi
       pinMatrix.style.display = 'flex';
       matrixActions.style.display = 'flex';
       renderMatrix();
+      openDiagnostics();
     } else {
       setupStatus.textContent = '● SIAP';
       setupStatus.className = 'badge badge-mint';
