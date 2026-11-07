@@ -34,7 +34,7 @@ Pin-selection notes:
 - **Pump 2:** GPIO 18 is used instead of 17; both work, but 18 matches the table’s primary pin.
 - **DHT11:** GPIO 4 has a pull-up on the DHT data line, so it is safe as a boot-strapping pin.
 
-If your harness is already crimped for an alternate pin, change the matching `#define` at the top of `BroccoliBiosphereCabin.ino`. All pin choices are reported live in `/api/telemetry` under `pins`.
+If your harness is already crimped for an alternate pin, remap it from the **`/setup` page** — the firmware stores a GPIO map in flash, so no reflash is needed. You can also change the matching `#define` at the top of `BroccoliBiosphereCabin.ino` as a new factory default. The active map is reported live in `/api/telemetry` under `pins`.
 
 ### Relay polarity
 
@@ -61,6 +61,7 @@ Power each relay board from its rated coil voltage (usually **5 V**, from the ES
 - **Sensor self-heal** — DHT11 is re-initialized every 15 s after a sustained fault; soil probes use a 12-sample trimmed average, disable their pump when unreadable, and log recovery. The UI reports each sensor’s link state.
 - **WiFi self-heal** — the board retries the router every 15 s, keeps a fallback AP alive while offline, and drops the AP after the STA link is stable for 60 s.
 - **Manual recovery** — `reinitSensors`, `reconnectWiFi`, `allOff`, and `restart` are available from the REST API and both consoles.
+- **Runtime GPIO map & pin setup** — all 11 pin roles (7 relays, status LED, 2 soil probes, DHT11) are stored in NVS, not baked in. Open `http://<board>/setup`, enter setup mode (automation parks, all outputs off), assign each role to a GPIO from the safe pool, probe pins one by one (relay pulse / ADC read / DHT read), then save — the map is validated, written to flash, and the board reboots into autonomous operation. Setpoints, soil calibration, day/phase, and tank refills persist across reboots too.
 
 Set your Wi-Fi credentials at the top of `BroccoliBiosphereCabin.ino`:
 
@@ -77,6 +78,7 @@ const char* WIFI_PASSWORD = "SAujian1234";
 ├── dashboard.html               # Standalone compact console (served by ESP32 and Node)
 ├── ota.html                     # Pastel web OTA page with Brocco-chan + Capy
 ├── server.js                    # Local simulation server + static file server
+├── setup.html                    # Pin setup wizard page (served by ESP32 at /setup and Node)
 ├── index.html                   # Redirect helper for the public console
 ├── public/                      # Main modern console (HTML/CSS/JS, zero dependencies)
 ├── tools/embed-dashboard.js     # Regenerates dashboard_html.h
@@ -92,7 +94,8 @@ npm start
 
 - Main console: <http://127.0.0.1:8080/>
 - Standalone console: <http://127.0.0.1:8080/dashboard.html>
-- OTA page preview: <http://127.0.0.1:8080/update> (upload disabled in simulation)
+- OTA page preview: <http://127.0.0.1:8080/update> (upload accepted and stored under `uploads/`)
+- Pin setup page: <http://127.0.0.1:8080/setup>
 - API: <http://127.0.0.1:8080/api/telemetry>
 
 The Node server simulates temperature, humidity, both soil probes, VPD, PCS, relays, pump pulses, and the automatic control loop. Use the target field in the main console to point it at a physical ESP32 instead.
@@ -146,6 +149,7 @@ Key fields:
 
 ```json
 {
+  "fw": "3.0.0",
   "temp": 19.0, "rh": 64.0,
   "soil1": 56.4, "soil2": 48.2, "soil": 52.3,
   "adc1": 2187, "adc2": 2335,
@@ -166,9 +170,10 @@ Key fields:
   "pins": {
     "dht": 4, "soil1": 34, "soil2": 35,
     "peltier": 25, "spare": 26, "fan": 27, "growLight": 14,
-    "ledStrip": 32, "pump1": 19, "pump2": 18, "statusLed": 2
+    "ledStrip": 32, "pump1": 19, "pump2": 18, "statusLed": 2,
+    "setupMode": false
   },
-  "ota": { "web": true, "arduino": true, "hostname": "biosphere" }
+  "ota": { "web": true, "arduino": true, "hostname": "biosphere", "inProgress": false, "bytesWritten": 0 }
 }
 ```
 
@@ -200,12 +205,33 @@ Example:
 curl -X POST "http://192.168.1.50/api/control?action=toggleRelay&ch=6"
 ```
 
+### `GET /api/pins` / `POST /api/pins`
+
+Pin setup API — the `/setup` page and the main console's **PINS ⚙** button use it. `GET` returns `{setupMode, active, staged, kinds, pool}`; `POST` takes `action`:
+
+| Action | Parameters | Effect |
+|---|---|---|
+| `enter` | — | Enter setup mode: automation parks, all outputs OFF, control API returns 409 |
+| `set` | `role=<key>&pin=<gpio>` | Stage one role→GPIO assignment (255 = unassigned) |
+| `test` | `kind=relay\|soil\|dht&pin=<gpio>` | Probe one pin: 1.2 s relay pulse, raw ADC, or a live DHT reading |
+| `factory` | — | Stage the factory default map |
+| `cancel` | — | Exit setup mode, discard staged changes |
+| `save` | — | Validate the staged map (no duplicate GPIOs, DHT required), write NVS, reboot |
+
+Example:
+
+```bash
+curl -X POST "http://192.168.1.50/api/pins?action=enter"
+curl -X POST "http://192.168.1.50/api/pins?action=test&kind=relay&pin=19"
+curl -X POST "http://192.168.1.50/api/pins?action=save"
+```
+
 ## Soil calibration
 
 1. Put probe 1 in dry air, wait for a stable reading, then click **S1 DRY AIR** (or call `action=calibrateSoil&sensor=1&type=dry`).
 2. Submerge probe 1 in water, wait, then click **S1 WATER**.
 3. Repeat for probe 2 with the S2 buttons.
-4. Defaults are 3200 (dry) and 1400 (wet). Calibration is kept in RAM and resets on reboot; change the `SOIL*_DRY_RAW` / `SOIL*_WET_RAW` defines to persist your values.
+4. Defaults are 3200 (dry) and 1400 (wet). Calibration points are saved to flash and survive reboots, same as setpoints, day/phase, tank refills, and the GPIO pin map.
 
 ## Notes and troubleshooting
 

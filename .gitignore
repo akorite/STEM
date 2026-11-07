@@ -9,6 +9,9 @@ build/
 *.bin
 *.elf
 
+# Simulated OTA uploads (server.js stores POSTed firmware here)
+uploads/
+
 # Environment & local files
 .env
 .env.local

@@ -31,6 +31,7 @@ Benchtop laboratory environment, running continuously on desktop/laptop displays
 - OTA firmware updates through a pastel `/update` page and Arduino IDE network upload (`biosphere.local`).
 - Sensor/WiFi self-healing with per-sensor health, manual re-check/reconnect, all-outputs-off, and restart controls.
 - Dual-target connection: Local Node simulation (`127.0.0.1:8080`) or physical ESP32 IP / `biosphere.local` over LAN.
+- Runtime GPIO map persisted in ESP32 flash: `/setup` wizard for manual per-pin assignment, one-at-a-time probing (relay pulse / ADC / DHT), validated save to NVS, then autonomous operation. Setpoints, calibration, day/phase and tank refills also persist across reboots.
 
 ## Brand Commitments
 Kebun Biosfer // Biosphere Cabin Telemetry & Control Engine. Industrial agronomy and precision aerospace telemetry aesthetic.

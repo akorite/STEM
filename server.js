@@ -72,6 +72,10 @@ let state = {
     pump2: 18,
     statusLed: 2
   },
+  fw: '3.0.0',
+  setupMode: false,
+  otaInProgress: false,
+  otaBytesWritten: 0,
   health: {
     dhtOk: true,
     dhtAgeMs: 900,
@@ -113,6 +117,8 @@ let state = {
 const pumpTimers = { 1: null, 2: null };
 const pumpLastStop = { 1: 0, 2: 0 };
 let lastHistoryPush = 0;
+let stagedPins = { ...state.pins };
+let pinTestTimer = null;
 
 function timeString() {
   return new Date().toTimeString().split(' ')[0];
@@ -170,8 +176,7 @@ function updateStatus() {
 }
 
 function startPump(pump, seconds, reason) {
-  state.relays[`pump${pump}`] = true;
-  if (pumpTimers[pump]) clearTimeout(pumpTimers[pump]);
+  clearTimeout(pumpTimers[pump]);
   pumpTimers[pump] = setTimeout(() => {
     state.relays[`pump${pump}`] = false;
     pumpLastStop[pump] = state.uptimeSec;
@@ -192,8 +197,8 @@ function stopPump(pump, reason) {
     if (reason) log(`Pump ${pump} OFF (${reason})`);
   }
 }
-
 function simulateAutomation() {
+  if (state.setupMode) return;
   // Composition: grow light + LED strip follow the 16h photoperiod in phase 2.
   if (state.autoMode) {
     const lightOn = state.phase === 2;
@@ -287,6 +292,7 @@ function payload() {
 
   return {
     ip: state.ip,
+    fw: state.fw,
     uptime: `${h}:${m}:${s}`,
     status: state.status,
     autoMode: state.autoMode,
@@ -315,7 +321,7 @@ function payload() {
     soil2Fault: false,
     relays: state.relays,
     thresholds: state.thresholds,
-    pins: state.pins,
+    pins: { ...state.pins, setupMode: state.setupMode },
     health: {
       ...state.health,
       uptimeMs: state.uptimeSec * 1000,
@@ -323,7 +329,10 @@ function payload() {
       soil1AgeMs: 700,
       soil2AgeMs: 700
     },
-    ota: { web: false, arduino: false, hostname: null },
+    ota: {
+      web: true, arduino: false, hostname: 'simulation',
+      inProgress: state.otaInProgress, bytesWritten: state.otaBytesWritten
+    },
     history: state.history,
     logs: state.logs
   };
@@ -351,6 +360,12 @@ function serveStatic(req, res, filePath) {
 function handleControl(url, res) {
   const action = url.searchParams.get('action');
   const nowTs = timeString();
+
+  if (state.setupMode) {
+    res.writeHead(409, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: false, error: 'pin setup mode is active' }));
+    return;
+  }
 
   if (action === 'flush') {
     startPump(1, 5, 'emergency flush');
@@ -452,11 +467,7 @@ function handleControl(url, res) {
     log('WiFi reconnect requested (simulation)');
   } else if (action === 'allOff') {
     state.autoMode = false;
-    Object.keys(state.relays).forEach((key) => { state.relays[key] = false; });
-    [1, 2].forEach((pump) => {
-      if (pumpTimers[pump]) clearTimeout(pumpTimers[pump]);
-      pumpTimers[pump] = null;
-    });
+    allSimOutputsOff();
     log('Manual: ALL outputs OFF');
   } else if (action === 'restart') {
     Object.keys(state.relays).forEach((key) => { state.relays[key] = false; });
@@ -472,6 +483,195 @@ function handleControl(url, res) {
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ success: true, ts: nowTs }));
+}
+
+// ---------------------------------------------------------------------------
+// Pin setup API — mirrors the ESP32 /api/pins contract (RAM-only persistence)
+// ---------------------------------------------------------------------------
+const PIN_ROLES = {
+  peltier: 'output', fan: 'output', spare: 'output', growLight: 'output',
+  ledStrip: 'output', pump1: 'output', pump2: 'output', statusLed: 'output',
+  soil1: 'adc1', soil2: 'adc1', dht: 'dht'
+};
+const PINPOOL_OUTPUT = [0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33];
+const PINPOOL_ADC1 = [32, 33, 34, 35, 36, 39];
+
+function pinUsableFor(kind, pin) {
+  if (pin === 255) return true;
+  if (kind === 'output') return PINPOOL_OUTPUT.includes(pin);
+  if (kind === 'adc1') return PINPOOL_ADC1.includes(pin);
+  return PINPOOL_OUTPUT.includes(pin) || PINPOOL_ADC1.includes(pin);
+}
+
+function validateSimPinMap(map) {
+  const keys = Object.keys(PIN_ROLES);
+  for (const key of keys) {
+    const pin = map[key];
+    if (pin === 255) continue;
+    if (!pinUsableFor(PIN_ROLES[key], pin)) {
+      return `GPIO ${pin} cannot host ${key}`;
+    }
+    for (const other of keys) {
+      if (other !== key && map[other] === pin) {
+        return `GPIO ${pin} assigned to both ${key} and ${other}`;
+      }
+    }
+  }
+  if (map.dht === 255) return 'dht must stay assigned; safe mode depends on it';
+  return null;
+}
+
+function stopSimPinTest() {
+  clearTimeout(pinTestTimer);
+  pinTestTimer = null;
+}
+
+function allSimOutputsOff() {
+  Object.keys(state.relays).forEach((key) => { state.relays[key] = false; });
+  [1, 2].forEach((pump) => {
+    clearTimeout(pumpTimers[pump]);
+    pumpTimers[pump] = null;
+  });
+}
+
+function handlePins(url, res) {
+  const action = url.searchParams.get('action') || '';
+  const json = (code, obj) => {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(obj));
+  };
+
+  if (action === '' || action === 'status') {
+    return json(200, {
+      setupMode: state.setupMode,
+      active: state.pins,
+      staged: stagedPins,
+      kinds: PIN_ROLES,
+      pool: { output: PINPOOL_OUTPUT, adc1: PINPOOL_ADC1 }
+    });
+  }
+
+  if (action === 'enter') {
+    state.setupMode = true;
+    state.autoMode = false;
+    allSimOutputsOff();
+    stagedPins = { ...state.pins };
+    log('PIN SETUP: entered; automation parked, all outputs OFF');
+    return json(200, { success: true, setupMode: true });
+  }
+
+  if (action === 'cancel') {
+    stopSimPinTest();
+    state.setupMode = false;
+    stagedPins = { ...state.pins };
+    log('PIN SETUP: cancelled; staged changes discarded');
+    return json(200, { success: true, setupMode: false });
+  }
+
+  if (!state.setupMode) {
+    return json(409, { error: 'not in setup mode; POST action=enter first' });
+  }
+
+  if (action === 'set') {
+    const role = url.searchParams.get('role');
+    const pin = parseInt(url.searchParams.get('pin'), 10);
+    if (!Object.prototype.hasOwnProperty.call(PIN_ROLES, role)) {
+      return json(400, { error: 'unknown role' });
+    }
+    if (!Number.isInteger(pin) || !pinUsableFor(PIN_ROLES[role], pin)) {
+      return json(400, { error: `GPIO ${pin} cannot host ${role}` });
+    }
+    stagedPins[role] = pin;
+    log(`PIN SETUP: ${role} staged on GPIO ${pin}`);
+    return json(200, { success: true });
+  }
+
+  if (action === 'factory') {
+    stagedPins = {
+      dht: 4, soil1: 34, soil2: 35, peltier: 25, fan: 27, spare: 26,
+      growLight: 14, ledStrip: 32, pump1: 19, pump2: 18, statusLed: 2
+    };
+    log('PIN SETUP: factory defaults staged');
+    return json(200, { success: true });
+  }
+
+  if (action === 'test') {
+    const kind = url.searchParams.get('kind') || 'relay';
+    const pin = parseInt(url.searchParams.get('pin'), 10);
+    const probeKind = kind === 'soil' ? 'adc1' : kind === 'dht' ? 'dht' : 'output';
+    if (!Number.isInteger(pin) || !pinUsableFor(probeKind, pin)) {
+      return json(400, { error: 'pin not usable for that kind' });
+    }
+    if (kind === 'soil') {
+      const adc = 1200 + Math.round(Math.random() * 1800);
+      return json(200, { success: true, kind: 'soil', pin, adc });
+    }
+    if (kind === 'dht') {
+      return json(200, { success: true, kind: 'dht', pin, ok: true, temp: 21.4, rh: 62.0 });
+    }
+    log(`PIN SETUP: pulsing GPIO ${pin}`);
+    stopSimPinTest();
+    pinTestTimer = setTimeout(() => { pinTestTimer = null; }, 1200);
+    return json(200, { success: true, kind: 'relay', pin });
+  }
+
+  if (action === 'save') {
+    const err = validateSimPinMap(stagedPins);
+    if (err) return json(400, { error: err });
+    state.pins = { ...stagedPins };
+    state.setupMode = false;
+    stopSimPinTest();
+    log('PIN SETUP: map saved (simulation); running with new GPIO map');
+    return json(200, { success: true, rebooting: false, simulation: true });
+  }
+
+  json(400, { error: 'unknown action' });
+}
+
+
+// ---------------------------------------------------------------------------
+// Simulated OTA flash — real multipart handling so the /update flow is
+// exercisable end-to-end; the binary is stored under uploads/ instead of flash.
+// ---------------------------------------------------------------------------
+function handleOtaUpload(req, res) {
+  const chunks = [];
+  req.on('data', (c) => chunks.push(c));
+  req.on('end', () => {
+    try {
+      const body = Buffer.concat(chunks);
+      const ctype = req.headers['content-type'] || '';
+      const boundaryMatch = /boundary=(.+)$/.exec(ctype);
+      if (!boundaryMatch) throw new Error('missing multipart boundary');
+      const boundary = '--' + boundaryMatch[1].trim();
+      const text = body.toString('latin1');
+      const fileIdx = text.indexOf('filename="');
+      if (fileIdx < 0) throw new Error('no file part in upload');
+      const nameStart = fileIdx + 'filename="'.length;
+      const fileName = path.basename(text.slice(nameStart, text.indexOf('"', nameStart)));
+      const headerEnd = text.indexOf('\r\n\r\n', fileIdx);
+      const partEnd = text.indexOf('\r\n' + boundary, headerEnd);
+      const fileBytes = Buffer.from(text.slice(headerEnd + 4, partEnd), 'latin1');
+
+      const dir = path.join(__dirname, 'uploads');
+      fs.mkdirSync(dir, { recursive: true });
+      const target = path.join(dir, fileName || 'firmware.bin');
+      fs.writeFileSync(target, fileBytes);
+      state.otaBytesWritten = fileBytes.length;
+      log(`OTA upload received: ${fileName} (${fileBytes.length} bytes) -> uploads/ (simulated flash)`);
+
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>OTA Success</title></head>` +
+        `<body style="font-family:system-ui;max-width:560px;margin:40px auto;padding:24px;background:#FFF7FA;color:#2E262C">` +
+        `<div style="background:#fff;border:2px solid #F9CCD7;border-radius:24px;padding:26px">` +
+        `<span style="display:inline-block;background:#D1FAE5;border:1px solid #A7F3D0;color:#065F46;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800">UPDATE OK (SIMULATION)</span>` +
+        `<h1 style="font-size:1.5rem;margin:14px 0 8px">🌱 Update simulated</h1>` +
+        `<p style="color:#6F5D67;line-height:1.55">Received <b>${fileName}</b> (${(fileBytes.length / 1024).toFixed(0)} KB) — stored under <code>uploads/</code>. On real hardware the controller would reboot into the new firmware.</p>` +
+        `<p style="margin-top:18px"><a href="/" style="color:#0369A1;font-weight:800">← Back to dashboard</a></p></div></body></html>`);
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('OTA upload failed: ' + err.message);
+    }
+  });
 }
 
 const server = http.createServer((req, res) => {
@@ -500,15 +700,31 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === '/api/pins') {
+    handlePins(url, res);
+    return;
+  }
+
   // Standalone (waifu) dashboard, same file that is embedded in the ESP32 firmware.
   if (pathname === '/dashboard.html' || pathname === '/dashboard' || pathname === '/waifu') {
     serveStatic(req, res, DASHBOARD_FILE);
     return;
   }
 
-  // OTA page preview in simulation. Uploading is hardware-only.
-  if (pathname === '/update') {
+  // Pin setup page — same file the ESP32 serves at /setup.
+  if (pathname === '/setup') {
+    serveStatic(req, res, path.join(__dirname, 'setup.html'));
+    return;
+  }
+
+  // OTA page + simulated flash. POST stores the binary under uploads/ so the
+  // whole web-OTA flow is exercisable without hardware.
+  if (pathname === '/update' && req.method === 'GET') {
     serveStatic(req, res, path.join(__dirname, 'ota.html'));
+    return;
+  }
+  if (pathname === '/update' && req.method === 'POST') {
+    handleOtaUpload(req, res);
     return;
   }
 

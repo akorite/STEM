@@ -32,6 +32,7 @@
 #include <ESPmDNS.h>
 #include <ArduinoOTA.h>
 #include <Update.h>
+#include <Preferences.h>
 #include <DHT.h>
 #include <math.h>
 
@@ -52,14 +53,26 @@ const char* WIFI_PASSWORD = "SAujian1234";
 #define FALLBACK_AP_PASSWORD    "biosphere123"
 #define MDNS_HOSTNAME           "biosphere"
 #define OTA_PASSWORD            "biosphere123"
+#define FW_VERSION              "3.0.0"
 
-// --- Sensors -------------------------------------------------------------------------
+// --- GPIO pool ----------------------------------------------------------------------------
+// Output-capable user pins: relay roles and the status LED may live on any of these.
+// Input-only pins are listed separately (ADC1 + always-safe digital inputs).
+#define PINPOOL_OUTPUT   {0,2,4,5,12,13,14,15,16,17,18,19,21,22,23,25,26,27,32,33}
+#define PINPOOL_INPUT    {32,33,34,35,36,39}
+#define PINPOOL_ADC1     {32,33,34,35,36,39}
+// 255 = "pin not assigned" (role disabled)
+#define PIN_NONE         255
+
+// --- Factory default pin map -------------------------------------------------------------
+// These are compile-time fallbacks only. A saved map in NVS (Preferences, namespace
+// "biosphere") overrides them at boot; /setup writes that map.
 #define PIN_DHT11                4    // DHT11 DATA
 #define PIN_SOIL1                34   // Capacitive soil 1 AOUT (ADC1, input-only)
 #define PIN_SOIL2                35   // Capacitive soil 2 AOUT (ADC1, input-only)
 #define DHTTYPE                  DHT11
 
-// --- Relay outputs -------------------------------------------------------------------
+// --- Relay outputs -----------------------------------------------------------------------
 // Set RELAY_ACTIVE_LOW to 0 only if your relay board triggers on HIGH.
 #define RELAY_ACTIVE_LOW         1
 
@@ -88,7 +101,57 @@ const char* WIFI_PASSWORD = "SAujian1234";
 // Status indicator (onboard blue LED on most ESP32 Dev Modules)
 #define PIN_STATUS_LED           2
 
-// --- Soil calibration ----------------------------------------------------------------
+// --- Runtime pin map ----------------------------------------------------------------------
+// The live map. Loaded from NVS at boot (falling back to the defaults above) and replaced
+// wholesale on save. Stage edits through /api/pins?action=set only while setup mode is on.
+struct PinMap {
+  uint8_t dht;
+  uint8_t soil1;
+  uint8_t soil2;
+  uint8_t peltier;
+  uint8_t fan;
+  uint8_t spare;
+  uint8_t growLight;
+  uint8_t ledStrip;
+  uint8_t pump1;
+  uint8_t pump2;
+  uint8_t statusLed;
+};
+
+PinMap pins = {
+  PIN_DHT11, PIN_SOIL1, PIN_SOIL2,
+  PIN_RELAY_PELTIER, PIN_RELAY_FAN, PIN_RELAY_SPARE, PIN_RELAY_GROWLIGHT,
+  PIN_RELAY_LED_STRIP, PIN_RELAY_PUMP1, PIN_RELAY_PUMP2, PIN_STATUS_LED
+};
+// Staged edits made during setup mode; applied to `pins` on save.
+PinMap stagedPins = pins;
+
+// Pin-role descriptors shared by validation, the API and the /setup page.
+enum PinKind { PIN_OUTPUT, PIN_ADC1, PIN_DHT };
+
+struct PinRole {
+  const char* key;       // JSON field + NVS key (max 15 chars for NVS)
+  const char* label;     // human name for logs/UI
+  PinKind kind;
+  uint8_t PinMap::* field;
+};
+
+const PinRole PIN_ROLES[] = {
+  {"peltier",   "Peltier cooler",   PIN_OUTPUT, &PinMap::peltier},
+  {"fan",       "Combined fan",     PIN_OUTPUT, &PinMap::fan},
+  {"spare",     "Spare relay",      PIN_OUTPUT, &PinMap::spare},
+  {"growLight", "Grow light",       PIN_OUTPUT, &PinMap::growLight},
+  {"ledStrip",  "LED strip",        PIN_OUTPUT, &PinMap::ledStrip},
+  {"pump1",     "Pump 1 (zone A)",  PIN_OUTPUT, &PinMap::pump1},
+  {"pump2",     "Pump 2 (zone B)",  PIN_OUTPUT, &PinMap::pump2},
+  {"statusLed", "Status LED",       PIN_OUTPUT, &PinMap::statusLed},
+  {"soil1",     "Soil probe 1",     PIN_ADC1,   &PinMap::soil1},
+  {"soil2",     "Soil probe 2",     PIN_ADC1,   &PinMap::soil2},
+  {"dht",       "DHT11 data",       PIN_DHT,    &PinMap::dht},
+};
+#define PIN_ROLE_COUNT (sizeof(PIN_ROLES) / sizeof(PIN_ROLES[0]))
+
+// --- Soil calibration --------------------------------------------------------------------
 // Capacitive V2.0 output is inversely proportional to moisture.
 // Calibrate each probe individually from the dashboard if needed; these are safe defaults.
 #define SOIL1_DRY_RAW            3200
@@ -96,7 +159,7 @@ const char* WIFI_PASSWORD = "SAujian1234";
 #define SOIL2_DRY_RAW            3200
 #define SOIL2_WET_RAW            1400
 
-// --- Pump safety / fluidics ----------------------------------------------------------
+// --- Pump safety / fluidics --------------------------------------------------------------
 #define PUMP_FLOW_RATE_ML_S      10.0f  // Estimated pump flow, used only for tank estimates
 #define TANK_MAX_CAPACITY_ML     1000.0f
 
@@ -181,6 +244,13 @@ struct SystemState {
   bool otaRebootPending = false;
   uint32_t otaRebootAt = 0;
   uint32_t otaLastActivity = 0;
+  uint32_t otaBytesWritten = 0;
+
+  // Pin setup mode: automation and safe-mode fallback stay parked while the
+  // operator assigns and tests GPIOs one by one. Enter/exit via /api/pins.
+  bool setupMode = false;
+  uint8_t pinTestPin = PIN_NONE;   // pin currently held ON by a test pulse
+  uint32_t pinTestUntil = 0;
 
   // Emergency flush
   bool flushActive = false;
@@ -250,8 +320,15 @@ uint8_t logHead = 0;
 uint8_t logCount = 0;
 
 // Global instances
-DHT dht(PIN_DHT11, DHTTYPE);
+// DHT is heap-allocated inside setup(): its pin comes from the saved map, which is
+// only known after loadConfig() runs — a global constructor would bind the default.
+DHT* dht = nullptr;
+Preferences prefs;
 WebServer server(80);
+
+// Defined in sections 8b/8c; referenced by handlers before their definition points.
+void saveConfig();
+void allOutputsOff();
 
 AgronomicMetrics metrics;
 SystemState state;
@@ -381,10 +458,12 @@ float calculatePlantComfortScore(float T, float rh, float vpd) {
 // =========================================================================================
 
 void rawRelayWrite(uint8_t pin, bool active) {
+  if (pin == PIN_NONE) return;
   digitalWrite(pin, active ? RELAY_ON : RELAY_OFF);
 }
 
 void initRelayPin(uint8_t pin) {
+  if (pin == PIN_NONE) return;
   // Preload the OFF level before switching the pin to OUTPUT to avoid boot chatter.
   digitalWrite(pin, RELAY_OFF);
   pinMode(pin, OUTPUT);
@@ -398,12 +477,12 @@ void initRelayPin(uint8_t pin) {
  */
 void applyPeltier(bool enable) {
   if (enable) {
-    rawRelayWrite(PIN_RELAY_FAN, true);
+    rawRelayWrite(pins.fan, true);
     state.fan = true;
-    rawRelayWrite(PIN_RELAY_PELTIER, true);
+    rawRelayWrite(pins.peltier, true);
     state.peltier = true;
   } else {
-    rawRelayWrite(PIN_RELAY_PELTIER, false);
+    rawRelayWrite(pins.peltier, false);
     state.peltier = false;
   }
 }
@@ -413,35 +492,35 @@ void applyFan(bool enable) {
     addSystemLog("SAFETY: fan OFF blocked while Peltier is ON; Peltier forced OFF");
     applyPeltier(false);
   }
-  rawRelayWrite(PIN_RELAY_FAN, enable);
+  rawRelayWrite(pins.fan, enable);
   state.fan = enable;
 }
 
 void applySpare(bool enable) {
-  rawRelayWrite(PIN_RELAY_SPARE, enable);
+  rawRelayWrite(pins.spare, enable);
   state.spare = enable;
 }
 
 void applyGrowLight(bool enable) {
-  rawRelayWrite(PIN_RELAY_GROWLIGHT, enable);
+  rawRelayWrite(pins.growLight, enable);
   state.growLight = enable;
 }
 
 void applyLedStrip(bool enable) {
-  rawRelayWrite(PIN_RELAY_LED_STRIP, enable);
+  rawRelayWrite(pins.ledStrip, enable);
   state.ledStrip = enable;
 }
 
 void setPump(uint8_t pump, bool enable) {
   uint32_t now = millis();
   if (pump == 1) {
-    rawRelayWrite(PIN_RELAY_PUMP1, enable);
+    rawRelayWrite(pins.pump1, enable);
     state.pump1 = enable;
     if (enable) {
       state.pump1OnSince = now;
     }
   } else if (pump == 2) {
-    rawRelayWrite(PIN_RELAY_PUMP2, enable);
+    rawRelayWrite(pins.pump2, enable);
     state.pump2 = enable;
     if (enable) {
       state.pump2OnSince = now;
@@ -532,8 +611,8 @@ void evaluateClimateStatus() {
 
 void pollSensors() {
   // ---- DHT11 (temperature + relative humidity) -------------------------------------
-  float rawT  = dht.readTemperature();
-  float rawRh = dht.readHumidity();
+  float rawT  = (dht && pins.dht != PIN_NONE) ? dht->readTemperature() : NAN;
+  float rawRh = (dht && pins.dht != PIN_NONE) ? dht->readHumidity() : NAN;
 
   bool dhtValid = !isnan(rawT) && !isnan(rawRh) &&
                   rawT >= -10.0f && rawT <= 60.0f &&
@@ -543,14 +622,15 @@ void pollSensors() {
     health.dhtOk = false;
     if (health.dhtFails < 999) health.dhtFails++;
 
-    if (health.dhtFails >= 3 && !state.dhtFault) {
+    // Pin setup deliberately parks the safe-mode fallback so relays stay user-driven.
+    if (health.dhtFails >= 3 && !state.dhtFault && !state.setupMode) {
       triggerSafeModeFallback();
     }
 
     // Self-heal: retry the DHT bus every 15 s after a sustained fault.
     if (health.dhtFails >= 6 &&
         (millis() - health.lastDhtReinit >= 15000UL)) {
-      dht.begin();
+      if (dht) dht->begin();
       health.lastDhtReinit = millis();
       if (health.dhtReinits < 999) health.dhtReinits++;
       addSystemLog("Self-heal: DHT11 bus re-initialized");
@@ -569,10 +649,11 @@ void pollSensors() {
   }
 
   // ---- Capacitive soil sensors ------------------------------------------------------
-  int raw1 = readAdcAverage(PIN_SOIL1);
-  int raw2 = readAdcAverage(PIN_SOIL2);
+  int raw1 = (pins.soil1 != PIN_NONE) ? readAdcAverage(pins.soil1) : 0;
+  int raw2 = (pins.soil2 != PIN_NONE) ? readAdcAverage(pins.soil2) : 0;
   state.lastRaw1 = raw1;
   state.lastRaw2 = raw2;
+
 
   bool valid1 = raw1 > 50 && raw1 < 4050;
   bool valid2 = raw2 > 50 && raw2 < 4050;
@@ -686,6 +767,7 @@ void updatePumpAutomation(uint8_t pump, float soil, bool soilValid, PumpRuntime&
 
 void executeAutomatedClimateControl() {
   if (state.otaInProgress) return;
+  if (state.setupMode) return;
   if (!state.autoMode) return;
   if (state.dhtFault) return;
 
@@ -797,7 +879,8 @@ void processStatusLed() {
   if (millis() - lastLedBlinkTime >= interval) {
     lastLedBlinkTime = millis();
     ledState = !ledState;
-    digitalWrite(PIN_STATUS_LED, ledState ? HIGH : LOW);
+    if (pins.statusLed != PIN_NONE)
+      digitalWrite(pins.statusLed, ledState ? HIGH : LOW);
   }
 }
 
@@ -864,6 +947,7 @@ void handleOTAUpload() {
 
   if (upload.status == UPLOAD_FILE_START) {
     state.otaInProgress = true;
+    state.otaBytesWritten = 0;
     state.otaUploadOk = false;
     state.otaWebUpload = true;
     state.otaRebootPending = false;
@@ -876,7 +960,10 @@ void handleOTAUpload() {
     }
   } else if (upload.status == UPLOAD_FILE_WRITE) {
     state.otaLastActivity = millis();
-    if (state.otaInProgress && Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+    if (state.otaInProgress &&
+        Update.write(upload.buf, upload.currentSize) == upload.currentSize) {
+      state.otaBytesWritten = Update.progress();
+    } else {
       Update.printError(Serial);
     }
   } else if (upload.status == UPLOAD_FILE_END) {
@@ -1033,6 +1120,7 @@ void handleTelemetryApi() {
 
   json += "{";
   json += "\"ip\":\"" + currentIpString() + "\",";
+  json += "\"fw\":\"" + String(FW_VERSION) + "\",";
   json += "\"uptime\":\"" + String(uptimeStr) + "\",";
   json += "\"status\":\"" + String(statusStr) + "\",";
   json += "\"autoMode\":" + String(state.autoMode ? "true" : "false") + ",";
@@ -1095,17 +1183,10 @@ void handleTelemetryApi() {
   json += "},";
 
   json += "\"pins\":{";
-  json += "\"dht\":" + String(PIN_DHT11) + ",";
-  json += "\"soil1\":" + String(PIN_SOIL1) + ",";
-  json += "\"soil2\":" + String(PIN_SOIL2) + ",";
-  json += "\"peltier\":" + String(PIN_RELAY_PELTIER) + ",";
-  json += "\"spare\":" + String(PIN_RELAY_SPARE) + ",";
-  json += "\"fan\":" + String(PIN_RELAY_FAN) + ",";
-  json += "\"growLight\":" + String(PIN_RELAY_GROWLIGHT) + ",";
-  json += "\"ledStrip\":" + String(PIN_RELAY_LED_STRIP) + ",";
-  json += "\"pump1\":" + String(PIN_RELAY_PUMP1) + ",";
-  json += "\"pump2\":" + String(PIN_RELAY_PUMP2) + ",";
-  json += "\"statusLed\":" + String(PIN_STATUS_LED);
+  for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+    json += "\"" + String(PIN_ROLES[i].key) + "\":" + String(pins.*(PIN_ROLES[i].field)) + ",";
+  }
+  json += "\"setupMode\":" + String(state.setupMode ? "true" : "false");
   json += "},";
 
   uint32_t nowMs = millis();
@@ -1138,7 +1219,9 @@ void handleTelemetryApi() {
   json += "},";
 
   json += "\"ota\":{";
-  json += "\"web\":true,\"arduino\":true,\"hostname\":\"" + String(MDNS_HOSTNAME) + "\"";
+  json += "\"web\":true,\"arduino\":true,\"hostname\":\"" + String(MDNS_HOSTNAME) + "\",";
+  json += "\"inProgress\":" + String(state.otaInProgress ? "true" : "false") + ",";
+  json += "\"bytesWritten\":" + String(state.otaBytesWritten);
   json += "},";
 
   json += "\"logs\":[";
@@ -1166,12 +1249,18 @@ void handleControlApi() {
     return;
   }
 
+  if (state.setupMode) {
+    server.send(409, "application/json", "{\"error\":\"pin setup mode is active\"}");
+    return;
+  }
+
   if (!server.hasArg("action")) {
     server.send(400, "application/json", "{\"error\":\"missing action\"}");
     return;
   }
 
   String action = server.arg("action");
+  bool persist = false;
 
   if (action == "mode") {
     state.autoMode = (server.arg("val") == "auto");
@@ -1186,6 +1275,7 @@ void handleControlApi() {
       state.phase = PHASE_AUTOTROPHIC_LIGHT;
       addSystemLog("Growth phase set to autotrophic light");
     }
+    persist = true;
   } else if (action == "day") {
     int d = server.arg("val").toInt();
     state.dayCounter = constrain(d, 1, 10);
@@ -1194,6 +1284,7 @@ void handleControlApi() {
     char msg[64];
     snprintf(msg, sizeof(msg), "Day counter set to day %u", state.dayCounter);
     addSystemLog(msg);
+    persist = true;
   } else if (action == "toggleRelay") {
     if (state.autoMode) {
       state.autoMode = false;
@@ -1267,6 +1358,7 @@ void handleControlApi() {
       state.tank2VolumeMl = TANK_MAX_CAPACITY_ML;
       addSystemLog("Tank 2 estimate reset to 1000 mL");
     }
+    persist = true;
   } else if (action == "calibrateSoil") {
     int sensor = server.arg("sensor").toInt();
     String type = server.arg("type");
@@ -1286,7 +1378,9 @@ void handleControlApi() {
     snprintf(msg, sizeof(msg), "Soil %d %s calibration stored: ADC %d",
              sensor, type.c_str(), raw);
     addSystemLog(msg);
+    persist = true;
   } else if (action == "setThreshold") {
+    persist = true;
     String param = server.arg("param");
     float val = server.arg("val").toFloat();
     if (param == "tempMin")      state.targetTempMin = constrain(val, 5.0f, 35.0f);
@@ -1297,7 +1391,7 @@ void handleControlApi() {
     else if (param == "soilMax") state.targetSoilMax = constrain(val, 5.0f, 95.0f);
     addSystemLog("Agronomic threshold updated");
   } else if (action == "reinitSensors") {
-    dht.begin();
+    if (dht) dht->begin();
     health.lastDhtReinit = millis();
     if (health.dhtReinits < 999) health.dhtReinits++;
     health.dhtFails = 0;
@@ -1308,17 +1402,9 @@ void handleControlApi() {
     health.lastWifiAttempt = 0;
     health.wifiDownSince = millis();
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    addSystemLog("Manual WiFi reconnect requested");
   } else if (action == "allOff") {
     state.autoMode = false;
-    stopSinglePulse();
-    state.flushActive = false;
-    applyPeltier(false);
-    applyFan(false);
-    applyGrowLight(false);
-    applyLedStrip(false);
-    applySpare(false);
-    stopAllPumps();
+    allOutputsOff();
     addSystemLog("Manual: ALL outputs OFF");
   } else if (action == "restart") {
     state.restartPending = true;
@@ -1329,7 +1415,347 @@ void handleControlApi() {
     return;
   }
 
+  if (persist) saveConfig();
   server.send(200, "application/json", "{\"success\":true}");
+}
+
+// =========================================================================================
+// 8b. PERSISTED CONFIG (Preferences / NVS)
+// =========================================================================================
+// One namespace "biosphere" holds the pin map plus the agronomic settings that must
+// survive a reboot: setpoints, soil calibration, phase/day and tank levels. Written
+// only on explicit operator actions — no periodic writes, so flash wear stays flat.
+
+bool pinInList(const uint8_t* list, uint8_t count, uint8_t pin) {
+  for (uint8_t i = 0; i < count; i++) if (list[i] == pin) return true;
+  return false;
+}
+
+bool pinUsableFor(const PinRole& role, uint8_t pin) {
+  if (pin == PIN_NONE) return true; // unassigned = role disabled
+  const uint8_t outList[]  = PINPOOL_OUTPUT;
+  const uint8_t adc1List[] = PINPOOL_ADC1;
+  switch (role.kind) {
+    case PIN_OUTPUT: return pinInList(outList, sizeof(outList), pin);
+    case PIN_ADC1:   return pinInList(adc1List, sizeof(adc1List), pin);
+    case PIN_DHT:    return pinInList(outList, sizeof(outList), pin) ||
+                            pinInList(adc1List, sizeof(adc1List), pin);
+  }
+  return false;
+}
+
+const PinRole* findPinRole(const String& key) {
+  for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+    if (key == PIN_ROLES[i].key) return &PIN_ROLES[i];
+  }
+  return nullptr;
+}
+
+// Validates a complete map. Returns true and sets `err` on the first problem.
+bool validatePinMap(const PinMap& map, String& err) {
+  for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+    uint8_t pin = map.*(PIN_ROLES[i].field);
+    if (pin == PIN_NONE) continue;
+    if (!pinUsableFor(PIN_ROLES[i], pin)) {
+      err = "GPIO " + String(pin) + " cannot host " + PIN_ROLES[i].key;
+      return false;
+    }
+    // Two roles may not share one GPIO.
+    for (uint8_t j = i + 1; j < PIN_ROLE_COUNT; j++) {
+      if (map.*(PIN_ROLES[j].field) == pin) {
+        err = "GPIO " + String(pin) + " assigned to both " +
+              PIN_ROLES[i].key + " and " + PIN_ROLES[j].key;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+void loadConfig() {
+  prefs.begin("biosphere", true); // read-only
+  for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+    uint8_t v = prefs.getUChar(PIN_ROLES[i].key, pins.*(PIN_ROLES[i].field));
+    pins.*(PIN_ROLES[i].field) = v;
+  }
+  String err;
+  if (!validatePinMap(pins, err)) {
+    // Corrupt or hand-edited NVS map: fall back to factory pins so the box stays usable.
+    Serial.printf("[CFG] saved pin map rejected (%s); factory defaults active\n", err.c_str());
+    PinMap factory = {
+      PIN_DHT11, PIN_SOIL1, PIN_SOIL2,
+      PIN_RELAY_PELTIER, PIN_RELAY_FAN, PIN_RELAY_SPARE, PIN_RELAY_GROWLIGHT,
+      PIN_RELAY_LED_STRIP, PIN_RELAY_PUMP1, PIN_RELAY_PUMP2, PIN_STATUS_LED
+    };
+    pins = factory;
+  }
+  stagedPins = pins;
+
+  state.targetTempMin = prefs.getFloat("tempMin", state.targetTempMin);
+  state.targetTempMax = prefs.getFloat("tempMax", state.targetTempMax);
+  state.targetRhMin   = prefs.getFloat("rhMin",   state.targetRhMin);
+  state.targetRhMax   = prefs.getFloat("rhMax",   state.targetRhMax);
+  state.targetSoilMin = prefs.getFloat("soilMin", state.targetSoilMin);
+  state.targetSoilMax = prefs.getFloat("soilMax", state.targetSoilMax);
+  state.soil1DryRaw   = prefs.getInt("dry1", state.soil1DryRaw);
+  state.soil1WetRaw   = prefs.getInt("wet1", state.soil1WetRaw);
+  state.soil2DryRaw   = prefs.getInt("dry2", state.soil2DryRaw);
+  state.soil2WetRaw   = prefs.getInt("wet2", state.soil2WetRaw);
+  state.dayCounter    = constrain((int)prefs.getUChar("day", state.dayCounter), 1, 10);
+  state.phase = (state.dayCounter <= 3) ? PHASE_GERMINATION_BLACKOUT
+                                        : PHASE_AUTOTROPHIC_LIGHT;
+  state.tank1VolumeMl = prefs.getFloat("tank1", TANK_MAX_CAPACITY_ML);
+  state.tank2VolumeMl = prefs.getFloat("tank2", TANK_MAX_CAPACITY_ML);
+  prefs.end();
+}
+
+void saveConfig() {
+  prefs.begin("biosphere", false);
+  prefs.putFloat("tempMin", state.targetTempMin);
+  prefs.putFloat("tempMax", state.targetTempMax);
+  prefs.putFloat("rhMin",   state.targetRhMin);
+  prefs.putFloat("rhMax",   state.targetRhMax);
+  prefs.putFloat("soilMin", state.targetSoilMin);
+  prefs.putFloat("soilMax", state.targetSoilMax);
+  prefs.putInt("dry1", state.soil1DryRaw);
+  prefs.putInt("wet1", state.soil1WetRaw);
+  prefs.putInt("dry2", state.soil2DryRaw);
+  prefs.putInt("wet2", state.soil2WetRaw);
+  prefs.putUChar("day", state.dayCounter);
+  prefs.putFloat("tank1", state.tank1VolumeMl);
+  prefs.putFloat("tank2", state.tank2VolumeMl);
+  prefs.end();
+}
+
+void savePinMap(const PinMap& map) {
+  prefs.begin("biosphere", false);
+  for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+    prefs.putUChar(PIN_ROLES[i].key, map.*(PIN_ROLES[i].field));
+  }
+  prefs.end();
+}
+
+// =========================================================================================
+// 8c. PIN SETUP API  (/api/pins)
+// =========================================================================================
+// Flow: POST action=enter -> automation parks, outputs off. action=set stages a role->GPIO
+// change, action=test probes a physical pin (relay pulse or sensor read), action=save
+// validates the staged map, writes NVS and reboots. action=cancel exits without saving.
+
+void allOutputsOff() {
+  stopSinglePulse();
+  state.flushActive = false;
+  applyPeltier(false);
+  applyFan(false);
+  applyGrowLight(false);
+  applyLedStrip(false);
+  applySpare(false);
+  stopAllPumps();
+}
+
+void stopPinTest() {
+  if (state.pinTestPin != PIN_NONE) {
+    digitalWrite(state.pinTestPin, RELAY_OFF);
+    state.pinTestPin = PIN_NONE;
+  }
+}
+
+void handlePinsApi() {
+  handleCORS();
+  if (server.method() == HTTP_OPTIONS) {
+    server.send(204);
+    return;
+  }
+
+  String action = server.arg("action");
+
+  // ---- GET: current + staged map, pools, setup flag --------------------------------
+  if (server.method() == HTTP_GET || action.length() == 0) {
+    const uint8_t outList[]  = PINPOOL_OUTPUT;
+    const uint8_t adc1List[] = PINPOOL_ADC1;
+    String json;
+    json.reserve(1024);
+    json += "{\"setupMode\":" + String(state.setupMode ? "true" : "false") + ",";
+    json += "\"active\":{";
+    for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+      json += "\"" + String(PIN_ROLES[i].key) + "\":" + String(pins.*(PIN_ROLES[i].field)) + ",";
+    }
+    json.setCharAt(json.length() - 1, '}');
+    json += ",\"staged\":{";
+    for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+      json += "\"" + String(PIN_ROLES[i].key) + "\":" + String(stagedPins.*(PIN_ROLES[i].field)) + ",";
+    }
+    json.setCharAt(json.length() - 1, '}');
+    json += ",\"kinds\":{";
+    for (uint8_t i = 0; i < PIN_ROLE_COUNT; i++) {
+      const char* k = (PIN_ROLES[i].kind == PIN_OUTPUT) ? "output"
+                    : (PIN_ROLES[i].kind == PIN_ADC1)   ? "adc1" : "dht";
+      json += "\"" + String(PIN_ROLES[i].key) + "\":\"" + k + "\",";
+    }
+    json.setCharAt(json.length() - 1, '}');
+    json += ",\"pool\":{\"output\":[";
+    for (uint8_t i = 0; i < sizeof(outList); i++) {
+      json += String(outList[i]); if (i < sizeof(outList) - 1) json += ",";
+    }
+    json += "],\"adc1\":[";
+    for (uint8_t i = 0; i < sizeof(adc1List); i++) {
+      json += String(adc1List[i]); if (i < sizeof(adc1List) - 1) json += ",";
+    }
+    json += "]}}";
+    server.send(200, "application/json", json);
+    return;
+  }
+
+  if (state.otaInProgress) {
+    server.send(503, "application/json", "{\"error\":\"OTA update in progress\"}");
+    return;
+  }
+
+  // ---- enter / cancel --------------------------------------------------------------
+  if (action == "enter") {
+    state.setupMode = true;
+    state.autoMode = false; // resume manually after cancel; save reboots anyway
+    allOutputsOff();
+    stagedPins = pins;
+    addSystemLog("PIN SETUP: entered; automation parked, all outputs OFF");
+    server.send(200, "application/json", "{\"success\":true,\"setupMode\":true}");
+    return;
+  }
+
+  if (action == "cancel") {
+    stopPinTest();
+    allOutputsOff();
+    state.setupMode = false;
+    stagedPins = pins;
+    addSystemLog("PIN SETUP: cancelled; staged changes discarded");
+    server.send(200, "application/json", "{\"success\":true,\"setupMode\":false}");
+    return;
+  }
+
+  if (!state.setupMode) {
+    server.send(409, "application/json",
+      "{\"error\":\"not in setup mode; POST action=enter first\"}");
+    return;
+  }
+
+  // ---- stage a single role->pin assignment -----------------------------------------
+  if (action == "set") {
+    String role = server.arg("role");
+    int pin = server.arg("pin").toInt();
+    const PinRole* r = findPinRole(role);
+    if (!r) {
+      server.send(400, "application/json", "{\"error\":\"unknown role\"}");
+      return;
+    }
+    if (!pinUsableFor(*r, (uint8_t)pin)) {
+      server.send(400, "application/json",
+        ("{\"error\":\"GPIO " + String(pin) + " cannot host " + role + "\"}").c_str());
+      return;
+    }
+    stagedPins.*(r->field) = (uint8_t)pin;
+    char msg[64];
+    snprintf(msg, sizeof(msg), "PIN SETUP: %s staged on GPIO %d", role.c_str(), pin);
+    addSystemLog(msg);
+    server.send(200, "application/json", "{\"success\":true}");
+    return;
+  }
+
+  // ---- factory restore (staged only; save still required) ----------------------------
+  if (action == "factory") {
+    PinMap factory = {
+      PIN_DHT11, PIN_SOIL1, PIN_SOIL2,
+      PIN_RELAY_PELTIER, PIN_RELAY_FAN, PIN_RELAY_SPARE, PIN_RELAY_GROWLIGHT,
+      PIN_RELAY_LED_STRIP, PIN_RELAY_PUMP1, PIN_RELAY_PUMP2, PIN_STATUS_LED
+    };
+    stagedPins = factory;
+    addSystemLog("PIN SETUP: factory defaults staged");
+    server.send(200, "application/json", "{\"success\":true}");
+    return;
+  }
+
+  // ---- physical probe of ONE pin -----------------------------------------------------
+  if (action == "test") {
+    String kind = server.arg("kind"); // "relay" | "soil" | "dht"
+    int pin = server.arg("pin").toInt();
+    const PinRole* probeRole =
+      (kind == "soil") ? findPinRole("soil1") :
+      (kind == "dht")  ? findPinRole("dht")   : findPinRole("peltier");
+    if (!probeRole || !pinUsableFor(*probeRole, (uint8_t)pin)) {
+      server.send(400, "application/json", "{\"error\":\"pin not usable for that kind\"}");
+      return;
+    }
+    stopPinTest();
+
+    if (kind == "soil") {
+      int raw = readAdcAverage((uint8_t)pin);
+      String json = "{\"success\":true,\"kind\":\"soil\",\"pin\":" + String(pin) +
+                    ",\"adc\":" + String(raw) + "}";
+      server.send(200, "application/json", json);
+      return;
+    }
+    if (kind == "dht") {
+      // Blocking by design (setup only): DHT needs ~1 s after begin before it answers.
+      DHT probe{static_cast<uint8_t>(pin), DHTTYPE};
+      probe.begin();
+      delay(1200);
+      float t = probe.readTemperature();
+      float h = probe.readHumidity();
+      bool ok = !isnan(t) && !isnan(h);
+      String json = "{\"success\":true,\"kind\":\"dht\",\"pin\":" + String(pin) +
+                    ",\"ok\":" + (ok ? "true" : "false");
+      if (ok) {
+        json += ",\"temp\":" + String(t, 1) + ",\"rh\":" + String(h, 1);
+      }
+      json += "}";
+      server.send(200, "application/json", json);
+      return;
+    }
+
+    // Default: relay pulse — pin driven active for 1.2 s then released.
+    digitalWrite((uint8_t)pin, RELAY_OFF);
+    pinMode((uint8_t)pin, OUTPUT);
+    digitalWrite((uint8_t)pin, RELAY_ON);
+    state.pinTestPin = (uint8_t)pin;
+    state.pinTestUntil = millis() + 1200UL;
+    char msg[64];
+    snprintf(msg, sizeof(msg), "PIN SETUP: pulsing GPIO %d", pin);
+    addSystemLog(msg);
+    String json = "{\"success\":true,\"kind\":\"relay\",\"pin\":" + String(pin) + "}";
+    server.send(200, "application/json", json);
+    return;
+  }
+
+  // ---- save: validate staged map, write NVS, reboot ----------------------------------
+  if (action == "save") {
+    String err;
+    if (!validatePinMap(stagedPins, err)) {
+      String json = "{\"error\":\"" + jsonEscape(err.c_str()) + "\"}";
+      server.send(400, "application/json", json);
+      return;
+    }
+    if (stagedPins.dht == PIN_NONE) {
+      server.send(400, "application/json",
+        "{\"error\":\"dht must stay assigned; safe mode depends on it\"}");
+      return;
+    }
+    pins = stagedPins;
+    savePinMap(pins);
+    saveConfig();
+    stopPinTest();
+    addSystemLog("PIN SETUP: map saved to NVS; rebooting");
+    state.restartPending = true;
+    state.restartAt = millis() + 800UL;
+    server.send(200, "application/json",
+      "{\"success\":true,\"rebooting\":true}");
+    return;
+  }
+
+  server.send(400, "application/json", "{\"error\":\"unknown action\"}");
+}
+
+void handleSetupPage() {
+  server.sendHeader("Cache-Control", "no-store");
+  server.send_P(200, "text/html; charset=utf-8", SETUP_HTML);
 }
 
 // =========================================================================================
@@ -1340,32 +1766,43 @@ void setup() {
   Serial.begin(115200);
   delay(400);
 
+  // Saved map + agronomic config override the factory #defines before any pinMode runs.
+  loadConfig();
+
   Serial.println();
   Serial.println("============================================================");
-  Serial.println("  SMART BIOSPHERE CABIN - ESP32 STARTUP");
-  Serial.println("  Peltier 25 | Fan 27 (x2 relays) | Spare 26 | Grow 14");
-  Serial.println("  LED 32 | Pump1 19 | Pump2 18 | Soil 34/35 | DHT11 4");
+  Serial.println("  SMART BIOSPHERE CABIN - ESP32 STARTUP  v" FW_VERSION);
+  Serial.printf("  Peltier %u | Fan %u | Spare %u | Grow %u | LED %u\n",
+                pins.peltier, pins.fan, pins.spare, pins.growLight, pins.ledStrip);
+  Serial.printf("  Pump1 %u | Pump2 %u | Soil %u/%u | DHT11 %u | LED %u\n",
+                pins.pump1, pins.pump2, pins.soil1, pins.soil2, pins.dht, pins.statusLed);
   Serial.println("============================================================");
 
   // Relay outputs: force OFF before OUTPUT to avoid boot chatter.
-  initRelayPin(PIN_RELAY_PELTIER);
-  initRelayPin(PIN_RELAY_SPARE);
-  initRelayPin(PIN_RELAY_FAN);
-  initRelayPin(PIN_RELAY_GROWLIGHT);
-  initRelayPin(PIN_RELAY_LED_STRIP);
-  initRelayPin(PIN_RELAY_PUMP1);
-  initRelayPin(PIN_RELAY_PUMP2);
+  initRelayPin(pins.peltier);
+  initRelayPin(pins.spare);
+  initRelayPin(pins.fan);
+  initRelayPin(pins.growLight);
+  initRelayPin(pins.ledStrip);
+  initRelayPin(pins.pump1);
+  initRelayPin(pins.pump2);
 
-  pinMode(PIN_STATUS_LED, OUTPUT);
-  digitalWrite(PIN_STATUS_LED, LOW);
+  if (pins.statusLed != PIN_NONE) {
+    pinMode(pins.statusLed, OUTPUT);
+    digitalWrite(pins.statusLed, LOW);
+  }
 
-  // ADC1 only: GPIO 34/35 are input-only and remain usable with Wi-Fi active.
+  // Soil probes: ADC1 input-only pins stay usable with Wi-Fi active.
   analogReadResolution(12);
   analogSetAttenuation(ADC_11db);
-  pinMode(PIN_SOIL1, INPUT);
-  pinMode(PIN_SOIL2, INPUT);
+  if (pins.soil1 != PIN_NONE) pinMode(pins.soil1, INPUT);
+  if (pins.soil2 != PIN_NONE) pinMode(pins.soil2, INPUT);
 
-  dht.begin();
+  if (pins.dht != PIN_NONE) {
+    dht = new DHT(pins.dht, DHTTYPE);
+    dht->begin();
+  }
+
 
   // Reasonable starting display values until the first sensor poll.
   metrics.temperature = 20.0f;
@@ -1386,7 +1823,8 @@ void setup() {
          (millis() - wifiStart < WIFI_CONNECT_TIMEOUT_MS)) {
     delay(250);
     Serial.print(".");
-    digitalWrite(PIN_STATUS_LED, !digitalRead(PIN_STATUS_LED));
+    if (pins.statusLed != PIN_NONE)
+      digitalWrite(pins.statusLed, !digitalRead(pins.statusLed));
   }
 
   if (WiFi.status() == WL_CONNECTED) {
@@ -1436,6 +1874,9 @@ void setup() {
   server.on("/api/telemetry", HTTP_GET, handleTelemetryApi);
   server.on("/api/telemetry", HTTP_OPTIONS, handleOptions);
   server.on("/api/control", HTTP_ANY, handleControlApi);
+  server.on("/api/pins", HTTP_ANY, handlePinsApi);
+  server.on("/api/pins", HTTP_OPTIONS, handleOptions);
+  server.on("/setup", HTTP_GET, handleSetupPage);
   server.on("/update", HTTP_GET, handleOTAForm);
   server.on("/update", HTTP_POST, handleOTAUpdate, handleOTAUpload);
   server.onNotFound(handleNotFound);
@@ -1493,4 +1934,9 @@ void loop() {
   updateTankVolumes();
   processStatusLed();
   processDaySequencer();
+
+  // Release the setup-mode test pulse when its 1.2 s window ends.
+  if (state.pinTestPin != PIN_NONE && millis() >= state.pinTestUntil) {
+    stopPinTest();
+  }
 }

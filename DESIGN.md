@@ -66,4 +66,13 @@
 - **World:** inherits the pastel botanical sanctuary — dotted cream-pink ground, milky cards, mint upload actions, amber safety notes, Quicksand + JetBrains Mono.
 - **Companions:** Brocco-chan gives the safety reminder; Capy guards the power cable.
 - **Instructions:** the OTA partition scheme, Export Compiled Binary path, upload sequence, failure recovery, and Arduino OTA credentials are visible before the file picker.
-- **States:** simulation notice with disabled upload, file-selected state, uploading state, pastel success page, pastel failure page with recovery link.
+- **States:** simulation notice (upload stored under `uploads/` instead of flash), file-selected state, uploading state, pastel success page, pastel failure page with recovery link.
+
+## Pin Setup Utility Surface
+
+- **Route:** `/setup` (embedded in firmware via `SETUP_HTML`, previewed by the Node simulator).
+- **Mode:** Operate. Three jobs in sequence: enter parked-automation setup mode, assign + probe each GPIO role one by one, validate and persist the map to NVS.
+- **World:** inherits the pastel botanical sanctuary — dotted cream-pink ground, milky cards, lavender test actions, mint commit, amber safety notes, Quicksand + JetBrains Mono.
+- **Companions:** Brocco-chan warns against firing every relay at once; Capy supervises the one-at-a-time probing.
+- **Layout:** hero card + GPIO matrix card (role, kind, active pin, staged select, TES probe button) + numbered instructions + factory-map / pool reference card.
+- **States:** idle gate (enter setup mode), active matrix with dirty/dup row highlighting and per-pin probe results, saving state, pastel success / validation-error notices, cancelled state.
